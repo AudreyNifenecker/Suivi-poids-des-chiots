@@ -30,7 +30,8 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-3">
-                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-rose-200 shadow-sm">
+                <!-- Sélecteur global du haut (masqué automatiquement en mode famille pour éviter le doublon) -->
+                <div id="global-litter-container" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-rose-200 shadow-sm">
                     <span class="text-xs font-bold text-rose-900"><i class="fa-solid fa-paw mr-1 text-rose-500"></i> Portée :</span>
                     <select id="global-litter-select" onchange="switchActiveLitter(this.value)" class="text-sm font-semibold bg-transparent text-rose-950 outline-none cursor-pointer">
                     </select>
@@ -388,11 +389,21 @@
 
         function openFamilyPortal() {
             document.getElementById('admin-nav').classList.add('hidden');
+            document.getElementById('global-litter-container').classList.add('hidden'); // Masque le sélecteur du haut en mode famille
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('family-view-container').classList.remove('hidden');
 
             document.getElementById('return-admin-btn').classList.add('hidden');
 
+            let savedLitters = localStorage.getItem('crunchis_all_litters');
+            if (savedLitters) {
+                litters = JSON.parse(savedLitters);
+            }
+
+            updateFamilyLitterSelect();
+        }
+
+        function updateFamilyLitterSelect() {
             const litterSelect = document.getElementById('family-litter-select');
             litterSelect.innerHTML = '';
             litters.forEach(l => {
@@ -422,6 +433,7 @@
         function exitFamilyPortal() {
             document.getElementById('family-view-container').classList.add('hidden');
             document.getElementById('admin-nav').classList.remove('hidden');
+            document.getElementById('global-litter-container').classList.remove('hidden'); // Réaffiche le sélecteur du haut en mode admin
             updateGlobalLitterSelect();
             switchTab('saisie');
             initApp();
@@ -493,7 +505,6 @@
                 document.getElementById('fam-latest-weight').innerText = "Globale";
                 document.getElementById('fam-total-gain').innerText = litter.puppies.length + " chiots";
                 
-                // Affichage détaillé de chaque chiot pour toute la portée
                 famDoubleContainer.innerHTML = '';
                 litter.puppies.forEach((p, idx) => {
                     let res = calculateDoubleWeight(litter, idx);
