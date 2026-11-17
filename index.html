@@ -393,16 +393,6 @@
 
             document.getElementById('return-admin-btn').classList.add('hidden');
 
-            // Force la mise à jour immédiate sur mobile en relisant le stockage local
-            let savedLitters = localStorage.getItem('crunchis_all_litters');
-            if (savedLitters) {
-                litters = JSON.parse(savedLitters);
-            }
-
-            updateFamilyLitterSelect();
-        }
-
-        function updateFamilyLitterSelect() {
             const litterSelect = document.getElementById('family-litter-select');
             litterSelect.innerHTML = '';
             litters.forEach(l => {
