@@ -48,13 +48,10 @@
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
+        <!-- Navigation Tabs (Sans l'onglet notifications) -->
         <div id="admin-nav" class="flex flex-wrap gap-2 mb-6 bg-white p-2 rounded-2xl shadow border border-rose-100">
             <button onclick="switchTab('saisie')" id="btn-tab-saisie" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-rose-400 text-white shadow">
                 <i class="fa-solid fa-pen-to-square mr-2"></i> Saisie & Poids
-            </button>
-            <button onclick="switchTab('notifications')" id="btn-tab-notifications" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-rose-50/50 text-rose-800 hover:bg-rose-100">
-                <i class="fa-solid fa-bell mr-2"></i> Validation & Notifs 🔔
             </button>
             <button onclick="switchTab('courbe')" id="btn-tab-courbe" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-rose-50/50 text-rose-800 hover:bg-rose-100">
                 <i class="fa-solid fa-chart-line mr-2"></i> Courbes
@@ -83,12 +80,9 @@
                         </h2>
                         <p id="litter-info-details" class="text-xs text-rose-700 mt-1">Date de naissance : - | Chiots : 0</p>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div>
                         <button onclick="addNewWeightRow()" class="bg-rose-400 hover:bg-rose-500 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow transition flex items-center gap-2">
                             <i class="fa-solid fa-plus"></i> Nouvelle date de pesée
-                        </button>
-                        <button onclick="triggerNewWeightNotification()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow transition flex items-center gap-2">
-                            <i class="fa-solid fa-paper-plane"></i> Donner le feu vert & Notifier 🔔
                         </button>
                     </div>
                 </div>
@@ -106,60 +100,7 @@
             </div>
         </div>
 
-        <!-- TAB 2: NOTIFICATIONS PUSH & VALIDATION -->
-        <div id="tab-notifications" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100 space-y-6">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-rose-100 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-rose-950 flex items-center gap-2">
-                        <i class="fa-solid fa-bell text-rose-500"></i> Validation Administrateur & Notification Familles
-                    </h2>
-                    <p class="text-rose-800 text-sm mt-1">Donnez le feu vert après vos saisies de poids pour alerter instantanément les familles.</p>
-                </div>
-                <button onclick="triggerNewWeightNotification()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-5 py-3 rounded-xl shadow transition flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-paper-plane"></i> Donner le feu vert (Envoyer la Notif) 🔔
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-rose-50/50 p-5 rounded-2xl border border-rose-200 space-y-3">
-                    <h3 class="font-bold text-rose-950 flex items-center gap-2">
-                        <i class="fa-solid fa-mobile-screen text-rose-600"></i> Ce que voient les familles sur leur écran
-                    </h3>
-                    <div class="bg-white p-4 rounded-xl border border-rose-200 shadow-sm space-y-2">
-                        <div class="flex items-center justify-between text-xs text-rose-700">
-                            <span class="font-bold">Le Fief des Petits Crunchis</span>
-                            <span>Validé par l'éleveur</span>
-                        </div>
-                        <p class="font-bold text-rose-950 text-sm">🐶 Nouvelle pesée disponible !</p>
-                        <p class="text-xs text-rose-800">L'éleveur vient de valider les poids du jour. Venez découvrir l'évolution de votre chiot en direct !</p>
-                    </div>
-                </div>
-
-                <div class="bg-rose-50/50 p-5 rounded-2xl border border-rose-200 space-y-4">
-                    <h3 class="font-bold text-rose-950 flex items-center gap-2">
-                        <i class="fa-solid fa-qrcode text-rose-600"></i> QR Code & Lien d'accès direct Familles
-                    </h3>
-                    <p class="text-xs text-rose-800">Partagez ce lien ou affichez le QR code dans l'élevage pour que les familles accèdent à leur espace en 1 clic.</p>
-                    <div class="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-xl border border-rose-200">
-                        <div id="qrcode-container" class="p-2 bg-white rounded-lg border border-rose-100 flex items-center justify-center"></div>
-                        <div class="space-y-2 flex-1 w-full">
-                            <label class="block text-xs font-bold text-rose-900">Lien d'accès direct (avec #famille) :</label>
-                            <input type="text" id="family-direct-link" readonly class="w-full text-xs bg-rose-50 border border-rose-200 rounded-lg p-2 font-mono text-rose-900" value="">
-                            <button onclick="copyFamilyDirectLink()" class="w-full bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-copy"></i> Copier le lien
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <h3 class="font-bold text-rose-950 mb-3">Historique des validations & feux verts</h3>
-                <div id="notifications-history" class="space-y-2"></div>
-            </div>
-        </div>
-
-        <!-- TAB 3: COURBE -->
+        <!-- TAB 2: COURBE -->
         <div id="tab-courbe" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100">
             <h2 class="text-xl font-bold text-rose-950 mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de Croissance Ponderale (g)
@@ -169,7 +110,7 @@
             </div>
         </div>
 
-        <!-- TAB 4: POURCENTAGE -->
+        <!-- TAB 3: POURCENTAGE -->
         <div id="tab-pourcentage" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100">
             <h2 class="text-xl font-bold text-rose-950 mb-2 flex items-center gap-2">
                 <i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier
@@ -183,7 +124,7 @@
             </div>
         </div>
 
-        <!-- TAB 5: PRISE DE POIDS -->
+        <!-- TAB 4: PRISE DE POIDS -->
         <div id="tab-prisedepoids" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100">
             <h2 class="text-xl font-bold text-rose-950 mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes)
@@ -196,7 +137,7 @@
             </div>
         </div>
 
-        <!-- TAB 6: HISTOGRAMME -->
+        <!-- TAB 5: HISTOGRAMME -->
         <div id="tab-histogramme" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100 space-y-8">
             <div>
                 <h2 class="text-xl font-bold text-rose-950 mb-4 flex items-center gap-2">
@@ -212,7 +153,7 @@
             </div>
         </div>
 
-        <!-- TAB 7: GESTION & SUPPRESSION -->
+        <!-- TAB 6: GESTION & SUPPRESSION -->
         <div id="tab-archives" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100 space-y-6">
             <h2 class="text-xl font-bold text-rose-950 mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-box-archive text-rose-500"></i> Gestion de toutes vos portées
@@ -221,20 +162,8 @@
             <div id="all-litters-list" class="space-y-3 mt-4"></div>
         </div>
 
-        <!-- VUE FAMILLE CIBLÉE (CHIOT SPÉCIFIQUE OU TOUTE LA PORTÉE) -->
+        <!-- VUE FAMILLE CIBLÉE -->
         <div id="family-view-container" class="hidden space-y-6">
-            <!-- Bannière d'alerte dynamique si l'éleveur a donné le feu vert -->
-            <div id="family-alert-banner" class="hidden bg-amber-500 text-white rounded-2xl p-4 shadow-lg flex justify-between items-center animate-pulse">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-bell text-2xl"></i>
-                    <div>
-                        <h3 class="font-bold text-base">Nouvelle pesée disponible !</h3>
-                        <p class="text-xs text-amber-100">L'éleveur vient de valider et publier les derniers poids de la portée.</p>
-                    </div>
-                </div>
-                <button onclick="dismissFamilyAlert()" class="bg-white text-amber-900 px-3 py-1.5 rounded-xl text-xs font-bold shadow">J'ai vu !</button>
-            </div>
-
             <!-- Barre supérieure espace famille -->
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
                 <div class="flex items-center gap-3">
@@ -246,7 +175,7 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <!-- Bouton Retour Élevage avec ID pour pouvoir le masquer en mode famille -->
+                    <!-- Bouton Retour Élevage masqué automatiquement pour les familles -->
                     <button id="return-admin-btn" onclick="exitFamilyPortal()" class="bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow transition flex items-center gap-2">
                         <i class="fa-solid fa-arrow-left"></i> Retour Élevage
                     </button>
@@ -377,11 +306,7 @@
                 weights: [
                     { date: "2026-04-23", values: [287, 265, 276, 298] },
                     { date: "2026-06-10", values: [2180, 2050, 2078, 2180] }
-                ],
-                notifications: [
-                    { date: "10/06/2026", title: "Feu vert éleveur - Nouvelle pesée", text: "Les poids de la portée ont été validés." }
-                ],
-                newUpdateAvailable: true
+                ]
             }
         ];
 
@@ -420,7 +345,6 @@
                 if (tabId === 'histogramme') updateBarCharts();
             }, 50);
 
-            if (tabId === 'notifications') renderNotificationsTab();
             if (tabId === 'archives') renderAllLittersList();
         }
 
@@ -434,7 +358,6 @@
             renderWeightsTable();
             renderPercentTable();
             renderGainTable();
-            renderNotificationsTab();
             updateCharts();
             updateBarCharts();
             saveAllLitters();
@@ -467,30 +390,11 @@
                 litterSelect.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>${l.name}</option>`;
             });
             updateFamilyPuppySelect();
-            checkFamilyAlertBanner();
-        }
-
-        function checkFamilyAlertBanner() {
-            let litter = getCurrentLitter();
-            const banner = document.getElementById('family-alert-banner');
-            if (litter.newUpdateAvailable) {
-                banner.classList.remove('hidden');
-            } else {
-                banner.classList.add('hidden');
-            }
-        }
-
-        function dismissFamilyAlert() {
-            let litter = getCurrentLitter();
-            litter.newUpdateAvailable = false;
-            saveAllLitters();
-            document.getElementById('family-alert-banner').classList.add('hidden');
         }
 
         function onFamilyLitterChange() {
             currentLitterId = document.getElementById('family-litter-select').value;
             updateFamilyPuppySelect();
-            checkFamilyAlertBanner();
         }
 
         function updateFamilyPuppySelect() {
@@ -647,64 +551,6 @@
             litter.weights.splice(wIdx, 1);
             saveAllLitters();
             initApp();
-        }
-
-        function triggerNewWeightNotification() {
-            let litter = getCurrentLitter();
-            let todayStr = new Date().toLocaleDateString('fr-FR');
-            litter.notifications.unshift({
-                date: todayStr,
-                title: "Feu vert éleveur - Nouvelle pesée",
-                text: "Les poids et l'évolution des chiots viennent d'être validés."
-            });
-            litter.newUpdateAvailable = true;
-            saveAllLitters();
-            alert("Feu vert donné ! Les familles verront l'alerte sur leur espace.");
-            switchTab('notifications');
-        }
-
-        function renderNotificationsTab() {
-            let litter = getCurrentLitter();
-            let container = document.getElementById('notifications-history');
-            container.innerHTML = '';
-
-            if (litter.notifications.length === 0) {
-                container.innerHTML = `<p class="text-xs text-rose-500 italic">Aucune notification enregistrée pour le moment.</p>`;
-                return;
-            }
-
-            litter.notifications.forEach(n => {
-                container.innerHTML += `
-                    <div class="bg-rose-50/50 p-3 rounded-xl border border-rose-200 flex justify-between items-center text-xs">
-                        <div>
-                            <span class="font-bold text-rose-950">${n.title}</span>
-                            <p class="text-rose-700">${n.text}</p>
-                        </div>
-                        <span class="text-rose-500 font-semibold">${n.date}</span>
-                    </div>
-                `;
-            });
-
-            let directUrl = window.location.href.split('#')[0] + "#famille";
-            document.getElementById('family-direct-link').value = directUrl;
-            
-            const qrContainer = document.getElementById('qrcode-container');
-            qrContainer.innerHTML = '';
-            new QRCode(qrContainer, {
-                text: directUrl,
-                width: 110,
-                height: 110,
-                colorDark: "#4c0519",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-        }
-
-        function copyFamilyDirectLink() {
-            let copyText = document.getElementById('family-direct-link');
-            copyText.select();
-            document.execCommand('copy');
-            alert("Lien d'accès direct copié dans le presse-papier !");
         }
 
         function updateCharts() {
@@ -934,9 +780,7 @@
                 name: name,
                 birthDate: date,
                 puppies: puppies,
-                weights: [{ date: date, values: puppies.map(() => 250) }],
-                notifications: [],
-                newUpdateAvailable: true
+                weights: [{ date: date, values: puppies.map(() => 250) }]
             };
 
             litters.push(newLitter);
