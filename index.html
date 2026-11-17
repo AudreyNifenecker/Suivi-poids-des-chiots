@@ -196,9 +196,12 @@
                 <!-- SECTION 1 : COURBE DE CROISSANCE & STATS -->
                 <div class="space-y-4">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                        <div>
-                            <h2 id="family-puppy-title" class="text-2xl font-bold text-rose-950">Courbe de Croissance</h2>
-                            <p id="family-puppy-subtitle" class="text-rose-700 text-sm">Le Fief des Petits Crunchis</p>
+                        <div class="flex items-center gap-3">
+                            <div id="family-puppy-photo-container"></div>
+                            <div>
+                                <h2 id="family-puppy-title" class="text-2xl font-bold text-rose-950">Courbe de Croissance</h2>
+                                <p id="family-puppy-subtitle" class="text-rose-700 text-sm">Le Fief des Petits Crunchis</p>
+                            </div>
                         </div>
                     </div>
 
@@ -284,8 +287,8 @@
                     <input type="number" id="modal-puppy-count" min="1" max="12" value="4" onchange="renderPuppyNameInputs()" class="w-full border border-rose-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-rose-900 mb-2">Détails des chiots (Prénom, Sexe & Couleur) :</label>
-                    <div id="modal-puppy-names-container" class="space-y-2 max-h-56 overflow-y-auto pr-2"></div>
+                    <label class="block text-sm font-semibold text-rose-900 mb-2">Détails des chiots (Nom, Sexe & Photo) :</label>
+                    <div id="modal-puppy-names-container" class="space-y-3 max-h-56 overflow-y-auto pr-2"></div>
                 </div>
             </div>
             <div class="flex justify-end gap-3 pt-4 border-t border-rose-100">
@@ -302,10 +305,10 @@
                 name: "Portée Utopia 2026",
                 birthDate: "2026-04-23",
                 puppies: [
-                    { name: "BAIKA", sex: "Femelle", color: "#e11d48" },
-                    { name: "BLACK JACK", sex: "Mâle", color: "#2563eb" },
-                    { name: "BANKAI", sex: "Mâle", color: "#059669" },
-                    { name: "BLISS", sex: "Femelle", color: "#d97706" }
+                    { name: "BAIKA", sex: "Femelle", color: "#e11d48", photo: "" },
+                    { name: "BLACK JACK", sex: "Mâle", color: "#2563eb", photo: "" },
+                    { name: "BANKAI", sex: "Mâle", color: "#059669", photo: "" },
+                    { name: "BLISS", sex: "Femelle", color: "#d97706", photo: "" }
                 ],
                 weights: [
                     { date: "2026-04-23", values: [287, 265, 276, 298] },
@@ -368,7 +371,6 @@
 
         function openFamilyPortal() {
             document.getElementById('admin-nav').classList.add('hidden');
-            // Masque le bouton "Nouvelle portée" et le bouton "Excel" du header en mode famille
             document.querySelector('header button[onclick="openNewLitterModal()"]').classList.add('hidden');
             document.querySelector('header button[onclick="exportToExcel()"]').classList.add('hidden');
 
@@ -415,7 +417,6 @@
         function exitFamilyPortal() {
             document.getElementById('family-view-container').classList.add('hidden');
             document.getElementById('admin-nav').classList.remove('hidden');
-            // Réaffiche le bouton "Nouvelle portée" et le bouton "Excel" du header en mode admin
             document.querySelector('header button[onclick="openNewLitterModal()"]').classList.remove('hidden');
             document.querySelector('header button[onclick="exportToExcel()"]').classList.remove('hidden');
 
@@ -468,10 +469,12 @@
             let datasets = [];
             let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
             let famDoubleContainer = document.getElementById('fam-double-weight');
+            let photoContainer = document.getElementById('family-puppy-photo-container');
 
             if (selectedVal === 'all') {
                 document.getElementById('family-puppy-title').innerText = litter.name;
                 document.getElementById('family-puppy-subtitle').innerText = "Suivi de croissance de toute la portée";
+                photoContainer.innerHTML = '';
                 
                 litter.puppies.forEach((puppy, pIdx) => {
                     let data = litter.weights.map(w => w.values[pIdx] || null);
@@ -505,6 +508,12 @@
                 document.getElementById('family-puppy-title').innerText = puppy.name;
                 let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
                 document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
+
+                if (puppy.photo) {
+                    photoContainer.innerHTML = `<img src="${puppy.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-rose-300 shadow-sm">`;
+                } else {
+                    photoContainer.innerHTML = `<div class="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center text-rose-400 border border-rose-200"><i class="fa-solid fa-dog text-xl"></i></div>`;
+                }
 
                 let data = litter.weights.map(w => w.values[pIdx] || null);
                 datasets.push({
@@ -574,7 +583,8 @@
             let theadTr = document.querySelector('#weights-table thead tr');
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
             litter.puppies.forEach(p => {
-                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</th>`;
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-7 h-7 rounded-full object-cover inline-block mr-1 border border-white">` : `<i class="fa-solid fa-dog mr-1"></i>`;
+                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag} ${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</th>`;
             });
             theadTr.innerHTML += '<th class="p-3 text-center rounded-r-xl">Actions</th>';
         }
@@ -685,7 +695,10 @@
             let table = document.getElementById('percent-table');
             let theadTr = table.querySelector('thead tr');
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
-            litter.puppies.forEach(p => theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${p.name}</th>`);
+            litter.puppies.forEach(p => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            });
             
             let tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
@@ -711,7 +724,10 @@
             let table = document.getElementById('gain-table');
             let theadTr = table.querySelector('thead tr');
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
-            litter.puppies.forEach(p => theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${p.name}</th>`);
+            litter.puppies.forEach(p => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            });
             
             let tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
@@ -736,7 +752,11 @@
             let pIndices = selectedVal === 'all' ? litter.puppies.map((_, idx) => idx) : [parseInt(selectedVal)];
 
             let pTable = document.getElementById('family-percent-table');
-            pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => `<th class="p-3 text-center" style="color:${litter.puppies[idx].color}">${litter.puppies[idx].name}</th>`).join('');
+            pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => {
+                let p = litter.puppies[idx];
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                return `<th class="p-3 text-center" style="color:${p.color}">${imgTag}${p.name}</th>`;
+            }).join('');
             let pTbody = pTable.querySelector('tbody');
             pTbody.innerHTML = '';
 
@@ -754,7 +774,11 @@
             }
 
             let gTable = document.getElementById('family-gain-table');
-            gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => `<th class="p-3 text-center" style="color:${litter.puppies[idx].color}">${litter.puppies[idx].name}</th>`).join('');
+            gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => {
+                let p = litter.puppies[idx];
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                return `<th class="p-3 text-center" style="color:${p.color}">${imgTag}${p.name}</th>`;
+            }).join('');
             let gTbody = gTable.querySelector('tbody');
             gTbody.innerHTML = '';
 
@@ -805,13 +829,17 @@
             container.innerHTML = '';
             for (let i = 1; i <= count; i++) {
                 container.innerHTML += `
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-rose-50/40 p-2.5 rounded-xl border border-rose-100">
                         <span class="text-xs font-bold text-rose-800 w-16">Chiot #${i}</span>
-                        <input type="text" id="puppy-name-${i}" placeholder="Nom du chiot" value="Chiot ${i}" class="flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none">
-                        <select id="puppy-sex-${i}" class="border border-rose-200 rounded-lg px-2 py-1.5 text-xs outline-none">
+                        <input type="text" id="puppy-name-${i}" placeholder="Nom" value="Chiot ${i}" class="flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white">
+                        <select id="puppy-sex-${i}" class="border border-rose-200 rounded-lg px-2 py-1.5 text-xs outline-none bg-white">
                             <option value="Mâle">Mâle</option>
                             <option value="Femelle" selected>Femelle</option>
                         </select>
+                        <div class="flex items-center gap-1.5 w-full sm:w-auto">
+                            <label class="text-[11px] text-rose-700 font-medium whitespace-nowrap"><i class="fa-solid fa-camera mr-1"></i>Photo :</label>
+                            <input type="file" id="puppy-photo-${i}" accept="image/*" class="text-xs text-rose-800 w-full sm:w-44 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-800 hover:file:bg-rose-200 cursor-pointer">
+                        </div>
                     </div>
                 `;
             }
@@ -823,16 +851,41 @@
             let count = parseInt(document.getElementById('modal-puppy-count').value) || 4;
 
             let puppies = [];
+            let processed = 0;
+
             for (let i = 1; i <= count; i++) {
                 let pName = document.getElementById(`puppy-name-${i}`).value || `Chiot ${i}`;
                 let pSex = document.getElementById(`puppy-sex-${i}`).value;
-                puppies.push({
+                let fileInput = document.getElementById(`puppy-photo-${i}`);
+                
+                let puppyObj = {
                     name: pName.toUpperCase(),
                     sex: pSex,
-                    color: defaultColors[(i - 1) % defaultColors.length]
-                });
+                    color: defaultColors[(i - 1) % defaultColors.length],
+                    photo: ""
+                };
+                puppies.push(puppyObj);
+
+                if (fileInput.files && fileInput.files[0]) {
+                    let reader = new FileReader();
+                    let currentIndex = i - 1;
+                    reader.onload = function(e) {
+                        puppies[currentIndex].photo = e.target.result;
+                        processed++;
+                        if (processed === count) finalizeNewLitter(name, date, puppies);
+                    };
+                    reader.readAsDataURL(fileInput.files[0]);
+                } else {
+                    processed++;
+                }
             }
 
+            if (processed === count) {
+                finalizeNewLitter(name, date, puppies);
+            }
+        }
+
+        function finalizeNewLitter(name, date, puppies) {
             let newLitter = {
                 id: "litter-" + Date.now(),
                 name: name,
