@@ -195,7 +195,7 @@
                     </div>
                 </div>
 
-                <!-- SECTION 1 : COURBE DE CROISSANCE -->
+                <!-- SECTION 1 : COURBE DE CROISSANCE & CARTES STATS -->
                 <div class="space-y-4">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                         <div>
@@ -204,18 +204,23 @@
                         </div>
                     </div>
 
-                    <div id="family-stats-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Cartes Statistiques (Incluant Poids Doublé) -->
+                    <div id="family-stats-cards" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
                             <span class="text-xs text-rose-700 uppercase font-semibold">Poids de naissance</span>
                             <p id="fam-birth-weight" class="text-xl font-bold text-rose-950 mt-1">- g</p>
                         </div>
                         <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
-                            <span class="text-xs text-rose-700 uppercase font-semibold">Dernier poids enregistré</span>
+                            <span class="text-xs text-rose-700 uppercase font-semibold">Dernier poids</span>
                             <p id="fam-latest-weight" class="text-xl font-bold text-rose-600 mt-1">- g</p>
                         </div>
                         <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
                             <span class="text-xs text-rose-700 uppercase font-semibold">Prise totale</span>
                             <p id="fam-total-gain" class="text-xl font-bold text-emerald-600 mt-1">+ - g</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+                            <span class="text-xs text-amber-800 uppercase font-semibold">Poids doublé (x2)</span>
+                            <p id="fam-double-weight" class="text-sm font-bold text-amber-950 mt-1">-</p>
                         </div>
                     </div>
 
@@ -445,6 +450,7 @@
                 document.getElementById('fam-birth-weight').innerText = "- g";
                 document.getElementById('fam-latest-weight').innerText = litter.weights.length > 0 ? "Global" : "- g";
                 document.getElementById('fam-total-gain').innerText = "Portée";
+                document.getElementById('fam-double-weight').innerText = "-";
 
             } else {
                 let pIdx = parseInt(selectedVal);
@@ -470,6 +476,23 @@
                 document.getElementById('fam-birth-weight').innerText = birthW + " g";
                 document.getElementById('fam-latest-weight').innerText = latestW + " g";
                 document.getElementById('fam-total-gain').innerText = (gain > 0 ? "+" : "") + gain + " g";
+
+                // Calcul du poids doublé (x2)
+                let doubleTarget = birthW !== '-' ? birthW * 2 : null;
+                let doubleDateStr = "Non atteint";
+                if (doubleTarget && litter.weights.length > 0 && litter.birthDate) {
+                    let birthTime = new Date(litter.birthDate).getTime();
+                    for (let w of litter.weights) {
+                        let val = w.values[pIdx];
+                        if (val && val >= doubleTarget) {
+                            let wTime = new Date(w.date).getTime();
+                            let diffDays = Math.round((wTime - birthTime) / (1000 * 60 * 60 * 24));
+                            doubleDateStr = `${w.date.split('-').reverse().join('/')} (J+${diffDays})`;
+                            break;
+                        }
+                    }
+                }
+                document.getElementById('fam-double-weight').innerText = doubleDateStr;
             }
 
             familyChartInstance = new Chart(canvasCtx, {
@@ -516,11 +539,11 @@
             });
 
             let theadTr = document.querySelector('#weights-table thead tr');
-            theadTr.innerHTML = '<th class="p-3 rounded-tl-xl">Date</th>';
+            theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
             litter.puppies.forEach(p => {
                 theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</th>`;
             });
-            theadTr.innerHTML += '<th class="p-3 text-center rounded-tr-xl">Actions</th>';
+            theadTr.innerHTML += '<th class="p-3 text-center rounded-r-xl">Actions</th>';
         }
 
         function addNewWeightRow() {
