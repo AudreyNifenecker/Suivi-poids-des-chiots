@@ -30,13 +30,6 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-3">
-                <!-- Sélecteur global du haut (masqué automatiquement en mode famille pour éviter le doublon) -->
-                <div id="global-litter-container" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-rose-200 shadow-sm">
-                    <span class="text-xs font-bold text-rose-900"><i class="fa-solid fa-paw mr-1 text-rose-500"></i> Portée :</span>
-                    <select id="global-litter-select" onchange="switchActiveLitter(this.value)" class="text-sm font-semibold bg-transparent text-rose-950 outline-none cursor-pointer">
-                    </select>
-                </div>
-
                 <button onclick="openFamilyPortal()" class="bg-stone-600 hover:bg-stone-700 text-white font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-2 text-sm">
                     <i class="fa-solid fa-eye"></i> Vue Familles
                 </button>
@@ -360,7 +353,6 @@
         }
 
         function initApp() {
-            updateGlobalLitterSelect();
             let litter = getCurrentLitter();
             document.getElementById('litter-main-title').innerHTML = `<i class="fa-solid fa-calendar-plus text-rose-500"></i> ${litter.name} - Pesées journalières`;
             let formattedDate = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
@@ -374,22 +366,8 @@
             saveAllLitters();
         }
 
-        function updateGlobalLitterSelect() {
-            const select = document.getElementById('global-litter-select');
-            select.innerHTML = '';
-            litters.forEach(l => {
-                select.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>${l.name}</option>`;
-            });
-        }
-
-        function switchActiveLitter(id) {
-            currentLitterId = id;
-            initApp();
-        }
-
         function openFamilyPortal() {
             document.getElementById('admin-nav').classList.add('hidden');
-            document.getElementById('global-litter-container').classList.add('hidden'); // Masque le sélecteur du haut en mode famille
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('family-view-container').classList.remove('hidden');
 
@@ -433,8 +411,6 @@
         function exitFamilyPortal() {
             document.getElementById('family-view-container').classList.add('hidden');
             document.getElementById('admin-nav').classList.remove('hidden');
-            document.getElementById('global-litter-container').classList.remove('hidden'); // Réaffiche le sélecteur du haut en mode admin
-            updateGlobalLitterSelect();
             switchTab('saisie');
             initApp();
         }
