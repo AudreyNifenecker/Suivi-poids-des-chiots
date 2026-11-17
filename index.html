@@ -100,12 +100,17 @@
             </div>
         </div>
 
-        <!-- TAB 2: COURBE -->
-        <div id="tab-courbe" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100">
-            <h2 class="text-xl font-bold text-rose-950 mb-4 flex items-center gap-2">
+        <!-- TAB 2: COURBE (ADMIN) -->
+        <div id="tab-courbe" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100 space-y-4">
+            <h2 class="text-xl font-bold text-rose-950 flex items-center gap-2">
                 <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de Croissance Ponderale (g)
             </h2>
-            <div style="position: relative; height: 450px; width: 100%;">
+            <!-- Indicateur Poids Doublé au-dessus de la courbe admin -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
+                <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Suivi du Poids Doublé (x2) :</span>
+                <div id="admin-chart-double-summary" class="flex flex-wrap gap-3 text-xs text-amber-950 font-medium"></div>
+            </div>
+            <div style="position: relative; height: 420px; width: 100%;">
                 <canvas id="growthChart"></canvas>
             </div>
         </div>
@@ -204,24 +209,28 @@
                         </div>
                     </div>
 
-                    <!-- Cartes Statistiques (Incluant Poids Doublé) -->
-                    <div id="family-stats-cards" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Cartes Statistiques -->
+                    <div id="family-stats-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
                             <span class="text-xs text-rose-700 uppercase font-semibold">Poids de naissance</span>
                             <p id="fam-birth-weight" class="text-xl font-bold text-rose-950 mt-1">- g</p>
                         </div>
                         <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
-                            <span class="text-xs text-rose-700 uppercase font-semibold">Dernier poids</span>
+                            <span class="text-xs text-rose-700 uppercase font-semibold">Dernier poids enregistré</span>
                             <p id="fam-latest-weight" class="text-xl font-bold text-rose-600 mt-1">- g</p>
                         </div>
                         <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
                             <span class="text-xs text-rose-700 uppercase font-semibold">Prise totale</span>
                             <p id="fam-total-gain" class="text-xl font-bold text-emerald-600 mt-1">+ - g</p>
                         </div>
-                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-                            <span class="text-xs text-amber-800 uppercase font-semibold">Poids doublé (x2)</span>
-                            <p id="fam-double-weight" class="text-sm font-bold text-amber-950 mt-1">-</p>
-                        </div>
+                    </div>
+
+                    <!-- Indicateur Poids Doublé directement au-dessus du graphique -->
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-2">
+                        <span class="text-xs font-bold text-amber-900 uppercase flex items-center gap-1.5">
+                            <i class="fa-solid fa-weight-scale text-amber-600"></i> Poids doublé (x2) :
+                        </span>
+                        <p id="fam-double-weight" class="text-sm font-bold text-amber-950">-</p>
                     </div>
 
                     <div style="position: relative; height: 420px; width: 100%;">
@@ -421,6 +430,41 @@
             initApp();
         }
 
+        function calculateDoubleWeight(litter, pIdx) {
+            if (litter.weights.length === 0 || !litter.birthDate) return "Non atteint";
+            let birthW = litter.weights[0].values[pIdx];
+            if (!birthW || birthW <= 0) return "Non atteint";
+
+            let doubleTarget = birthW * 2;
+            let birthTime = new Date(litter.birthDate).getTime();
+
+            for (let w of litter.weights) {
+                let val = w.values[pIdx];
+                if (val && val >= doubleTarget) {
+                    let wTime = new Date(w.date).getTime();
+                    let diffDays = Math.round((wTime - birthTime) / (1000 * 60 * 60 * 24));
+                    return `${w.date.split('-').reverse().join('/')} (J+${diffDays})`;
+                }
+            }
+            return "Non atteint";
+        }
+
+        function updateAdminChartDoubleSummary() {
+            let litter = getCurrentLitter();
+            let container = document.getElementById('admin-chart-double-summary');
+            if (!container) return;
+            container.innerHTML = '';
+
+            litter.puppies.forEach((p, pIdx) => {
+                let res = calculateDoubleWeight(litter, pIdx);
+                container.innerHTML += `
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm">
+                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : <span class="text-rose-950 font-semibold">${res}</span>
+                    </div>
+                `;
+            });
+        }
+
         function renderFamilyView() {
             let litter = getCurrentLitter();
             let selectedVal = document.getElementById('family-puppy-select').value;
@@ -447,10 +491,12 @@
                     });
                 });
 
-                document.getElementById('fam-birth-weight').innerText = "- g";
-                document.getElementById('fam-latest-weight').innerText = litter.weights.length > 0 ? "Global" : "- g";
-                document.getElementById('fam-total-gain').innerText = "Portée";
-                document.getElementById('fam-double-weight').innerText = "-";
+                document.getElementById('fam-birth-weight').innerText = "Portée";
+                document.getElementById('fam-latest-weight').innerText = "Globale";
+                document.getElementById('fam-total-gain').innerText = litter.puppies.length + " chiots";
+                
+                let summaryHtml = litter.puppies.map((p, idx) => `<span style="color:${p.color}; font-weight:bold;">${p.name}:</span> ${calculateDoubleWeight(litter, idx)}`).join(' | ');
+                document.getElementById('fam-double-weight').innerHTML = summaryHtml;
 
             } else {
                 let pIdx = parseInt(selectedVal);
@@ -477,21 +523,7 @@
                 document.getElementById('fam-latest-weight').innerText = latestW + " g";
                 document.getElementById('fam-total-gain').innerText = (gain > 0 ? "+" : "") + gain + " g";
 
-                // Calcul du poids doublé (x2)
-                let doubleTarget = birthW !== '-' ? birthW * 2 : null;
-                let doubleDateStr = "Non atteint";
-                if (doubleTarget && litter.weights.length > 0 && litter.birthDate) {
-                    let birthTime = new Date(litter.birthDate).getTime();
-                    for (let w of litter.weights) {
-                        let val = w.values[pIdx];
-                        if (val && val >= doubleTarget) {
-                            let wTime = new Date(w.date).getTime();
-                            let diffDays = Math.round((wTime - birthTime) / (1000 * 60 * 60 * 24));
-                            doubleDateStr = `${w.date.split('-').reverse().join('/')} (J+${diffDays})`;
-                            break;
-                        }
-                    }
-                }
+                let doubleDateStr = calculateDoubleWeight(litter, pIdx);
                 document.getElementById('fam-double-weight').innerText = doubleDateStr;
             }
 
@@ -559,12 +591,14 @@
             let litter = getCurrentLitter();
             litter.weights[wIdx].date = val;
             saveAllLitters();
+            updateAdminChartDoubleSummary();
         }
 
         function updateWeightVal(wIdx, pIdx, val) {
             let litter = getCurrentLitter();
             litter.weights[wIdx].values[pIdx] = val === '' ? 0 : parseFloat(val);
             saveAllLitters();
+            updateAdminChartDoubleSummary();
         }
 
         function deleteWeightRow(wIdx) {
@@ -594,6 +628,8 @@
                 data: { labels: labels, datasets: datasets },
                 options: { responsive: true, maintainAspectRatio: false }
             });
+
+            updateAdminChartDoubleSummary();
         }
 
         function updateBarCharts() {
