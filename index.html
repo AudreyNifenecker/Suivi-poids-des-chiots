@@ -393,6 +393,10 @@
 
             document.getElementById('return-admin-btn').classList.add('hidden');
 
+            updateFamilyLitterSelect();
+        }
+
+        function updateFamilyLitterSelect() {
             const litterSelect = document.getElementById('family-litter-select');
             litterSelect.innerHTML = '';
             litters.forEach(l => {
