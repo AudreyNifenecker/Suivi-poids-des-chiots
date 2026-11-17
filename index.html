@@ -368,6 +368,10 @@
 
         function openFamilyPortal() {
             document.getElementById('admin-nav').classList.add('hidden');
+            // Masque le bouton "Nouvelle portée" et le bouton "Excel" du header en mode famille
+            document.querySelector('header button[onclick="openNewLitterModal()"]').classList.add('hidden');
+            document.querySelector('header button[onclick="exportToExcel()"]').classList.add('hidden');
+
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('family-view-container').classList.remove('hidden');
 
@@ -411,6 +415,10 @@
         function exitFamilyPortal() {
             document.getElementById('family-view-container').classList.add('hidden');
             document.getElementById('admin-nav').classList.remove('hidden');
+            // Réaffiche le bouton "Nouvelle portée" et le bouton "Excel" du header en mode admin
+            document.querySelector('header button[onclick="openNewLitterModal()"]').classList.remove('hidden');
+            document.querySelector('header button[onclick="exportToExcel()"]').classList.remove('hidden');
+
             switchTab('saisie');
             initApp();
         }
@@ -810,75 +818,4 @@
         }
 
         function generateNewLitter() {
-            let name = document.getElementById('modal-litter-name').value || "Nouvelle portée";
-            let date = document.getElementById('modal-litter-date').value || new Date().toISOString().split('T')[0];
-            let count = parseInt(document.getElementById('modal-puppy-count').value) || 4;
-
-            let puppies = [];
-            for (let i = 1; i <= count; i++) {
-                let pName = document.getElementById(`puppy-name-${i}`).value || `Chiot ${i}`;
-                let pSex = document.getElementById(`puppy-sex-${i}`).value;
-                puppies.push({
-                    name: pName.toUpperCase(),
-                    sex: pSex,
-                    color: defaultColors[(i - 1) % defaultColors.length]
-                });
-            }
-
-            let newLitter = {
-                id: "litter-" + Date.now(),
-                name: name,
-                birthDate: date,
-                puppies: puppies,
-                weights: [{ date: date, values: puppies.map(() => 250) }]
-            };
-
-            litters.push(newLitter);
-            currentLitterId = newLitter.id;
-            saveAllLitters();
-            closeNewLitterModal();
-            initApp();
-        }
-
-        function deleteLitter(id) {
-            if (litters.length <= 1) {
-                alert("Vous ne pouvez pas supprimer la dernière portée active.");
-                return;
-            }
-            if (confirm("Êtes-vous sûr de vouloir supprimer cette portée ?")) {
-                litters = litters.filter(l => l.id !== id);
-                currentLitterId = litters[0].id;
-                saveAllLitters();
-                initApp();
-            }
-        }
-
-        function exportToExcel() {
-            let litter = getCurrentLitter();
-            let data = [];
-            let header = ["Date"];
-            litter.puppies.forEach(p => header.push(p.name));
-            data.push(header);
-
-            litter.weights.forEach(w => {
-                let row = [w.date];
-                litter.puppies.forEach((_, pIdx) => row.push(w.values[pIdx] || ""));
-                data.push(row);
-            });
-
-            let ws = XLSX.utils.aoa_to_sheet(data);
-            let wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Suivi Poids");
-            XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_poids.xlsx`);
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (window.location.hash === '#famille') {
-                openFamilyPortal();
-            } else {
-                initApp();
-            }
-        });
-    </script>
-</body>
-</html>
+            let name = document.getElementById('modal-litter-name
