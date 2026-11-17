@@ -298,6 +298,9 @@
         </div>
     </div>
 
+    <!-- INPUT FICHIER CACHÉ POUR MODIFICATION RAPIDE DE PHOTO -->
+    <input type="file" id="quick-photo-input" accept="image/*" class="hidden" onchange="handleQuickPhotoUpload(this)">
+
     <script>
         let litters = JSON.parse(localStorage.getItem('crunchis_all_litters')) || [
             {
@@ -318,6 +321,7 @@
         ];
 
         let currentLitterId = litters[0].id;
+        let activePuppyIndexForPhoto = null;
 
         function getCurrentLitter() {
             return litters.find(l => l.id === currentLitterId) || litters[0];
@@ -551,6 +555,25 @@
             renderFamilyTables(selectedVal);
         }
 
+        function triggerQuickPhotoChange(pIdx) {
+            activePuppyIndexForPhoto = pIdx;
+            document.getElementById('quick-photo-input').value = "";
+            document.getElementById('quick-photo-input').click();
+        }
+
+        function handleQuickPhotoUpload(input) {
+            if (input.files && input.files[0] && activePuppyIndexForPhoto !== null) {
+                let reader = new FileReader();
+                let litter = getCurrentLitter();
+                reader.onload = function(e) {
+                    litter.puppies[activePuppyIndexForPhoto].photo = e.target.result;
+                    saveAllLitters();
+                    initApp();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
         function renderWeightsTable() {
             let litter = getCurrentLitter();
             let tbody = document.getElementById('weights-tbody');
@@ -582,9 +605,16 @@
 
             let theadTr = document.querySelector('#weights-table thead tr');
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
-            litter.puppies.forEach(p => {
-                let imgTag = p.photo ? `<img src="${p.photo}" class="w-7 h-7 rounded-full object-cover inline-block mr-1 border border-white">` : `<i class="fa-solid fa-dog mr-1"></i>`;
-                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag} ${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</th>`;
+            litter.puppies.forEach((p, pIdx) => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-8 h-8 rounded-full object-cover inline-block mr-1.5 border-2 border-white shadow-sm">` : `<i class="fa-solid fa-dog mr-1"></i>`;
+                theadTr.innerHTML += `
+                    <th class="p-3 text-center" style="color:${p.color};">
+                        <div class="inline-flex items-center justify-center gap-1.5 cursor-pointer group" onclick="triggerQuickPhotoChange(${pIdx})" title="Cliquer pour modifier la photo">
+                            ${imgTag}
+                            <span class="group-hover:underline">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</span>
+                            <i class="fa-solid fa-camera text-[10px] text-rose-500 opacity-70 group-hover:opacity-100 ml-0.5"></i>
+                        </div>
+                    </th>`;
             });
             theadTr.innerHTML += '<th class="p-3 text-center rounded-r-xl">Actions</th>';
         }
