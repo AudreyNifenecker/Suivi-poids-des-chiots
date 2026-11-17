@@ -105,7 +105,6 @@
             <h2 class="text-xl font-bold text-rose-950 flex items-center gap-2">
                 <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de Croissance Ponderale (g)
             </h2>
-            <!-- Indicateur Poids Doublé au-dessus de la courbe admin -->
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
                 <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Suivi du Poids Doublé (x2) :</span>
                 <div id="admin-chart-double-summary" class="flex flex-wrap gap-3 text-xs text-amber-950 font-medium"></div>
@@ -200,7 +199,7 @@
                     </div>
                 </div>
 
-                <!-- SECTION 1 : COURBE DE CROISSANCE & CARTES STATS -->
+                <!-- SECTION 1 : COURBE DE CROISSANCE & STATS -->
                 <div class="space-y-4">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                         <div>
@@ -225,12 +224,10 @@
                         </div>
                     </div>
 
-                    <!-- Indicateur Poids Doublé directement au-dessus du graphique -->
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-2">
-                        <span class="text-xs font-bold text-amber-900 uppercase flex items-center gap-1.5">
-                            <i class="fa-solid fa-weight-scale text-amber-600"></i> Poids doublé (x2) :
-                        </span>
-                        <p id="fam-double-weight" class="text-sm font-bold text-amber-950">-</p>
+                    <!-- Indicateur Poids Doublé au-dessus du graphique -->
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
+                        <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) :</span>
+                        <div id="fam-double-weight" class="flex flex-wrap gap-3 text-xs text-amber-950 font-medium"></div>
                     </div>
 
                     <div style="position: relative; height: 420px; width: 100%;">
@@ -474,6 +471,7 @@
 
             let datasets = [];
             let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
+            let famDoubleContainer = document.getElementById('fam-double-weight');
 
             if (selectedVal === 'all') {
                 document.getElementById('family-puppy-title').innerText = litter.name;
@@ -495,8 +493,16 @@
                 document.getElementById('fam-latest-weight').innerText = "Globale";
                 document.getElementById('fam-total-gain').innerText = litter.puppies.length + " chiots";
                 
-                let summaryHtml = litter.puppies.map((p, idx) => `<span style="color:${p.color}; font-weight:bold;">${p.name}:</span> ${calculateDoubleWeight(litter, idx)}`).join(' | ');
-                document.getElementById('fam-double-weight').innerHTML = summaryHtml;
+                // Affichage détaillé de chaque chiot pour toute la portée
+                famDoubleContainer.innerHTML = '';
+                litter.puppies.forEach((p, idx) => {
+                    let res = calculateDoubleWeight(litter, idx);
+                    famDoubleContainer.innerHTML += `
+                        <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
+                            <span class="font-bold" style="color:${p.color};">${p.name}</span> : <span class="text-rose-950 font-semibold">${res}</span>
+                        </div>
+                    `;
+                });
 
             } else {
                 let pIdx = parseInt(selectedVal);
@@ -524,7 +530,7 @@
                 document.getElementById('fam-total-gain').innerText = (gain > 0 ? "+" : "") + gain + " g";
 
                 let doubleDateStr = calculateDoubleWeight(litter, pIdx);
-                document.getElementById('fam-double-weight').innerText = doubleDateStr;
+                famDoubleContainer.innerHTML = `<span class="font-bold" style="color:${puppy.color};">${puppy.name}</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span>`;
             }
 
             familyChartInstance = new Chart(canvasCtx, {
