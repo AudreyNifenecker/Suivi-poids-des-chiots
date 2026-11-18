@@ -579,17 +579,6 @@
         alert("Attention : Le commentaire n'a pas pu être enregistré sur le cloud Supabase. Vérifiez votre connexion.");
     }
 }
-            .from('portees')
-            .update({ content: appData })
-            .eq('id', 'main_data');
-            
-        if (error) throw error;
-        console.log("Sauvegarde cloud réussie !");
-    } catch (err) {
-        console.error("Erreur de sauvegarde :", err);
-        alert("Attention : Le commentaire n'a pas pu être enregistré sur le cloud Supabase. Vérifiez votre connexion.");
-    }
-}
         let familyChartInstance = null;
         let growthChartInstance = null;
         let gainBarChartInstance = null;
