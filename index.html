@@ -178,7 +178,7 @@
                     <h2 class="text-xl font-bold text-rose-950 flex items-center gap-2">
                         <i class="fa-solid fa-box-archive text-rose-500"></i> Gestion de toutes vos portées
                     </h2>
-                    <p class="text-xs text-rose-700 mt-1">Basculez, modifiez, supprimez ou importez vos portées.</p>
+                    <p class="text-xs text-rose-700 mt-1">Basculez, modifiez, supprimez, réorganisez ou importez vos portées.</p>
                 </div>
                 <div>
                     <button onclick="document.getElementById('import-excel-input').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-2">
@@ -991,16 +991,53 @@
             initApp();
         }
 
+        // --- FONCTIONS MONTER / DESCENDRE LES PORTÉES ---
+        function moveLitterUp(index) {
+            if (index <= 0) return;
+            let list = getLitters();
+            let temp = list[index];
+            list[index] = list[index - 1];
+            list[index - 1] = temp;
+            saveAllLitters();
+            renderAllLittersList();
+            updateAdminLitterSelect();
+        }
+
+        function moveLitterDown(index) {
+            let list = getLitters();
+            if (index >= list.length - 1) return;
+            let temp = list[index];
+            list[index] = list[index + 1];
+            list[index + 1] = temp;
+            saveAllLitters();
+            renderAllLittersList();
+            updateAdminLitterSelect();
+        }
+
         function renderAllLittersList() {
             let container = document.getElementById('all-litters-list');
             container.innerHTML = '';
             let list = getLitters();
-            list.forEach(l => {
+            
+            list.forEach((l, index) => {
+                let upDisabled = index === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
+                let downDisabled = index === list.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
+
                 container.innerHTML += `
                     <div class="bg-rose-50/50 p-4 rounded-2xl border border-rose-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h4 class="font-bold text-rose-950">${l.name}</h4>
-                            <p class="text-xs text-rose-700">Né le ${l.birthDate ? l.birthDate.split('-').reverse().join('/') : '-'} • ${l.puppies.length} chiots</p>
+                        <div class="flex items-center gap-3">
+                            <div class="flex flex-col gap-1">
+                                <button onclick="moveLitterUp(${index})" ${index === 0 ? 'disabled' : ''} class="w-7 h-7 bg-white text-rose-800 border border-rose-200 rounded-lg text-xs flex items-center justify-center transition ${upDisabled}" title="Monter">
+                                    <i class="fa-solid fa-arrow-up"></i>
+                                </button>
+                                <button onclick="moveLitterDown(${index})" ${index === list.length - 1 ? 'disabled' : ''} class="w-7 h-7 bg-white text-rose-800 border border-rose-200 rounded-lg text-xs flex items-center justify-center transition ${downDisabled}" title="Descendre">
+                                    <i class="fa-solid fa-arrow-down"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-rose-950">${l.name}</h4>
+                                <p class="text-xs text-rose-700">Né le ${l.birthDate ? l.birthDate.split('-').reverse().join('/') : '-'} • ${l.puppies.length} chiots</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
                             <button onclick="switchActiveLitter('${l.id}'); switchTab('saisie');" class="px-3 py-1.5 bg-rose-400 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold">Gérer</button>
@@ -1077,11 +1114,9 @@
                 litter.name = newName;
                 litter.birthDate = newDate;
 
-                // Ajuster le tableau des poids pour correspondre au nouveau nombre de chiots
                 litter.weights.forEach(w => {
                     let newValues = [];
                     for (let i = 0; i < newPuppies.length; i++) {
-                        // On essaie de conserver l'ancien poids si l'index existe, sinon 250g
                         newValues.push(w.values[i] !== undefined ? w.values[i] : 250);
                     }
                     w.values = newValues;
@@ -1370,4 +1405,3 @@
     </script>
 </body>
 </html>
-
