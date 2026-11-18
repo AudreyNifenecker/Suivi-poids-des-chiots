@@ -9,7 +9,7 @@
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f7f6; color: #333; }
         h1 { color: #2c3e50; font-size: 1.5rem; text-align: center; }
         .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, textarea, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         button { background-color: #3498db; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { background-color: #2980b9; }
         .litter-item { border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
@@ -21,7 +21,7 @@
 
     <div class="card">
         <h3>Ajouter une info / pesée</h3>
-        <input type="text" id="litterName" placeholder="Nom ou détails (ex: Portée Valkyrie - 350g)">
+        <input type="text" id="litterName" placeholder="Ex: Bankai - 350g">
         <button onclick="saveData()">Enregistrer et synchroniser</button>
     </div>
 
@@ -57,16 +57,12 @@
                 return;
             }
 
-            listEl.innerHTML = data.map(item => {
-                // Récupère n'importe quel texte disponible dans la ligne
-                const textContent = item.name || item.content || item.details || JSON.stringify(item);
-                return `
-                    <div class="litter-item">
-                        <strong>${textContent}</strong><br>
-                        <small>${new Date(item.created_at).toLocaleString()}</small>
-                    </div>
-                `;
-            }).join('');
+            listEl.innerHTML = data.map(item => `
+                <div class="litter-item">
+                    <strong>${item.name || 'Sans nom'}</strong><br>
+                    <small>${new Date(item.created_at).toLocaleString()}</small>
+                </div>
+            `).join('');
         }
 
         async function saveData() {
@@ -77,7 +73,6 @@
                 return;
             }
 
-            // On envoie directement dans la colonne 'name' qui existe de base
             const { error } = await _supabase
                 .from('Portées')
                 .insert([{ name: val }]);
