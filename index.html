@@ -951,12 +951,11 @@
                 let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
                 document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
 
-                // --- CALCUL DU COMPTEUR D'ÂGE AUTOMATIQUE ---
-                let birthDateStr = litter.birthDate; // Format 'YYYY-MM-DD'
+                // --- CALCUL DU COMPTEUR D'ÂGE INTELLIGENT (Semaines ou Année/Mois/Jours) ---
+                let birthDateStr = litter.birthDate; 
                 if (birthDateStr) {
                     let birthDateObj = new Date(birthDateStr);
                     let todayObj = new Date();
-                    // Remettre les heures à zéro pour comparer proprement les jours
                     birthDateObj.setHours(0,0,0,0);
                     todayObj.setHours(0,0,0,0);
 
@@ -964,25 +963,50 @@
                     let diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
                     if (diffDays < 0) diffDays = 0;
 
-                    let weeks = Math.floor(diffDays / 7);
-                    let remDays = diffDays % 7;
+                    let ageText = "";
 
-                    let weeksText = "";
-                    if (weeks === 0) {
-                        weeksText = `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
-                    } else if (remDays === 0) {
-                        weeksText = `${weeks} semaine${weeks > 1 ? 's' : ''} exactement`;
+                    // Si plus de 60 jours (~2 mois), on passe en Année / Mois / Jours
+                    if (diffDays >= 60) {
+                        let years = todayObj.getFullYear() - birthDateObj.getFullYear();
+                        let months = todayObj.getMonth() - birthDateObj.getMonth();
+                        let days = todayObj.getDate() - birthDateObj.getDate();
+
+                        if (days < 0) {
+                            months--;
+                            let prevMonth = new Date(todayObj.getFullYear(), todayObj.getMonth(), 0);
+                            days += prevMonth.getDate();
+                        }
+                        if (months < 0) {
+                            years--;
+                            months += 12;
+                        }
+
+                        let parts = [];
+                        if (years > 0) parts.push(`${years} an${years > 1 ? 's' : ''}`);
+                        if (months > 0) parts.push(`${months} mois`);
+                        if (days > 0 || parts.length === 0) parts.push(`${days} jour${days > 1 ? 's' : ''}`);
+                        
+                        ageText = parts.join(', ');
                     } else {
-                        weeksText = `${weeks} semaine${weeks > 1 ? 's' : ''} et ${remDays} jour${remDays > 1 ? 's' : ''}`;
+                        // Sinon affichage classique en semaines et jours
+                        let weeks = Math.floor(diffDays / 7);
+                        let remDays = diffDays % 7;
+
+                        if (weeks === 0) {
+                            ageText = `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                        } else if (remDays === 0) {
+                            ageText = `${weeks} semaine${weeks > 1 ? 's' : ''} exactement`;
+                        } else {
+                            ageText = `${weeks} semaine${weeks > 1 ? 's' : ''} et ${remDays} jour${remDays > 1 ? 's' : ''}`;
+                        }
                     }
 
                     let formattedBirthDate = birthDateStr.split('-').reverse().join('/');
 
                     document.getElementById('puppy-age-days').innerText = `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
                     document.getElementById('puppy-birth-date-text').innerText = `Né(e) le ${formattedBirthDate}`;
-                    document.getElementById('puppy-age-weeks').innerText = weeksText;
+                    document.getElementById('puppy-age-weeks').innerText = ageText;
 
-                    // Application dynamique de la couleur du ruban de naissance
                     let bannerEl = document.getElementById('puppy-age-banner');
                     bannerEl.style.borderColor = puppyColor;
                     
