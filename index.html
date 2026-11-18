@@ -276,12 +276,21 @@
                     </div>
                 </div>
 
-                <!-- COURBE COMPARATIVE DE TOUTE LA PORTÉE -->
+                <!-- COURBE COMPARATIVE DE TOUTE LA PORTÉE ET BANDEAU POIDS DOUBLÉ GLOBAL -->
                 <div class="space-y-4 pt-4 border-t border-rose-100">
-                    <h3 class="text-xl font-bold text-rose-950 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe comparative de toute la portée
-                    </h3>
-                    <p class="text-xs text-rose-700">Visualisez l'évolution de tous les frères et sœurs en même temps.</p>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                        <h3 class="text-xl font-bold text-rose-950 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe comparative de toute la portée
+                        </h3>
+                        <p class="text-xs text-rose-700">Visualisez l'évolution de tous les frères et sœurs en même temps.</p>
+                    </div>
+
+                    <!-- BANDEAU GLOBAL POIDS DOUBLÉ (VISIBLE EN VUE GLOBALE) -->
+                    <div id="family-global-double-banner" class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
+                        <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) - Toute la portée :</span>
+                        <div id="family-global-double-summary" class="flex flex-wrap gap-2 text-xs text-amber-950 font-medium"></div>
+                    </div>
+
                     <div style="position: relative; height: 420px; width: 100%;">
                         <canvas id="familyGrowthChart"></canvas>
                     </div>
@@ -745,7 +754,6 @@
             const select = document.getElementById('family-puppy-select');
             select.innerHTML = '';
             
-            // OPTION PORTÉE COMPLÈTE EN PREMIER CHOIX SYSTÉMATIQUE
             select.innerHTML += `<option value="all">🐾 Vue globale de toute la portée</option>`;
 
             litter.puppies.forEach((p, idx) => {
@@ -800,6 +808,22 @@
             });
         }
 
+        function updateFamilyGlobalDoubleSummary() {
+            let litter = getCurrentLitter();
+            let container = document.getElementById('family-global-double-summary');
+            if (!container) return;
+            container.innerHTML = '';
+
+            litter.puppies.forEach((p, pIdx) => {
+                let res = calculateDoubleWeight(litter, pIdx);
+                container.innerHTML += `
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
+                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : <span class="text-rose-950 font-semibold">${res}</span>
+                    </div>
+                `;
+            });
+        }
+
         function renderFamilyView() {
             let litter = getCurrentLitter();
             let selectedVal = document.getElementById('family-puppy-select').value;
@@ -810,10 +834,13 @@
             let datasets = [];
             let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
             let individualCard = document.getElementById('family-individual-card');
+            let globalDoubleBanner = document.getElementById('family-global-double-banner');
 
             if (selectedVal === "all") {
                 // VUE GLOBALE DE TOUTE LA PORTÉE
                 individualCard.classList.add('hidden');
+                globalDoubleBanner.classList.remove('hidden');
+                updateFamilyGlobalDoubleSummary();
 
                 litter.puppies.forEach((p, idx) => {
                     let data = litter.weights.map(w => w.values[idx] || null);
@@ -829,6 +856,8 @@
             } else {
                 // VUE INDIVIDUELLE D'UN CHIOT
                 individualCard.classList.remove('hidden');
+                globalDoubleBanner.classList.add('hidden');
+
                 let pIdx = parseInt(selectedVal);
                 let puppy = litter.puppies[pIdx];
                 document.getElementById('family-puppy-title').innerText = puppy.name;
