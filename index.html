@@ -1,1265 +1,1425 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Poids des Chiots - Le Fief des Petits Crunchis</title>
-    <!-- Tailwind CSS -->
+    <title>Suivi Portées Élevage - Le Fief des Petits Crunchis</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Supabase Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- SheetJS (XLSX) pour l'import Excel -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#fdf8f6',
-                            100: '#faebe7',
-                            500: '#e07a5f',
-                            600: '#d16244',
-                            700: '#b85034',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
+    <script>
+        const SUPABASE_URL = 'https://gqydchjaqokbdegrhris.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_7eQBzgkA5wfSBfTu0LLNAA_mP0J32uy';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
 </head>
-<body class="h-full bg-stone-100 text-stone-800 flex flex-col">
+<body class="bg-stone-950 min-h-screen text-stone-100 relative">
 
-    <!-- HEADER / NAVIGATION -->
-    <header class="bg-white border-b border-stone-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div id="header-logo-container" class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center overflow-hidden border border-stone-300 shadow-inner cursor-pointer" onclick="triggerHeaderLogoUpload()" title="Changer le logo de l'élevage">
-                    <i id="header-logo-icon" class="fa-solid fa-paw text-stone-500 text-lg"></i>
-                    <img id="header-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+    <!-- BOUTON COPIER LE CODE EN HAUT -->
+    <div class="absolute top-4 right-4 z-50">
+        <button onclick="copySourceCode()" class="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 font-semibold px-4 py-2 rounded-xl shadow-lg transition flex items-center gap-2 text-xs">
+            <i class="fa-solid fa-copy text-rose-400"></i> Copier le code
+        </button>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-4 md:p-6 pt-16 md:pt-6">
+        <!-- Header -->
+        <header class="bg-stone-900 text-stone-100 border border-stone-800 rounded-2xl p-6 shadow-xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div id="header-logo-container" onclick="triggerHeaderPhotoChange()" class="cursor-pointer group relative" title="Cliquer pour changer le logo/photo de l'élevage">
+                    <!-- Rendu dynamique du logo -->
                 </div>
-                <input type="file" id="header-logo-input" accept="image/*" class="hidden" onchange="handleHeaderLogoUpload(event)">
                 <div>
-                    <h1 class="text-base sm:text-lg font-bold text-stone-900 leading-tight">Le Fief des Petits Crunchis</h1>
-                    <p class="text-xs text-stone-500">Suivi de Croissance & Portées</p>
+                    <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                        Suivi Portées - Nurserie
+                    </h1>
+                    <p class="text-stone-400 text-sm mt-1">Le Fief des Petits Crunchis</p>
                 </div>
             </div>
-            
-            <!-- Navigation Tabs -->
-            <nav id="main-nav" class="flex space-x-1 sm:space-x-2">
-                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-brand-500 text-white shadow-sm">
-                    <i class="fa-solid fa-chart-line mr-1.5"></i>Suivi
+            <div class="flex flex-wrap items-center gap-3">
+                <button onclick="openFamilyPortal()" class="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-eye"></i> Vue Familles
                 </button>
-                <button onclick="switchTab('admin')" id="btn-tab-admin" class="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-stone-600 hover:bg-stone-100">
-                    <i class="fa-solid fa-sliders mr-1.5"></i>Gestion / Suppr.
+                <button onclick="openNewLitterModal()" class="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-plus-circle"></i> Nouvelle portée
                 </button>
-            </nav>
-        </div>
-    </header>
-
-    <!-- MAIN CONTAINER -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-y-auto">
-
-        <!-- SYNC STATUS BANNER -->
-        <div id="sync-status" class="mb-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-between shadow-sm">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
-                <span id="sync-status-text">Mode hors-ligne (stockage local). Configurez Supabase pour synchroniser.</span>
+                <button onclick="exportToExcel()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </button>
             </div>
-            <button onclick="openSupabaseConfigModal()" class="text-xs bg-amber-200 hover:bg-amber-300 text-amber-900 font-semibold px-2.5 py-1 rounded-lg transition-colors">
-                <i class="fa-solid fa-cloud mr-1"></i> Configurer
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div id="admin-nav" class="flex flex-wrap gap-2 mb-6 bg-stone-900 p-2 rounded-2xl shadow border border-stone-800">
+            <button onclick="switchTab('saisie')" id="btn-tab-saisie" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-rose-600 text-white shadow">
+                <i class="fa-solid fa-pen-to-square mr-2"></i> Saisie & Poids
+            </button>
+            <button onclick="switchTab('courbe')" id="btn-tab-courbe" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-stone-800 text-stone-300 hover:bg-stone-700">
+                <i class="fa-solid fa-chart-line mr-2"></i> Courbes
+            </button>
+            <button onclick="switchTab('pourcentage')" id="btn-tab-pourcentage" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-stone-800 text-stone-300 hover:bg-stone-700">
+                <i class="fa-solid fa-percent mr-2"></i> % Évolution
+            </button>
+            <button onclick="switchTab('prisedepoids')" id="btn-tab-prisedepoids" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-stone-800 text-stone-300 hover:bg-stone-700">
+                <i class="fa-solid fa-weight-scale mr-2"></i> Prise (grs)
+            </button>
+            <button onclick="switchTab('histogramme')" id="btn-tab-histogramme" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-stone-800 text-stone-300 hover:bg-stone-700">
+                <i class="fa-solid fa-chart-column mr-2"></i> Histogrammes
+            </button>
+            <button onclick="switchTab('archives')" id="btn-tab-archives" class="tab-btn flex-1 min-w-[130px] py-3 px-3 rounded-xl font-semibold text-sm transition bg-stone-800 text-stone-300 hover:bg-stone-700">
+                <i class="fa-solid fa-box-archive mr-2"></i> Gestion / Suppr.
             </button>
         </div>
 
-        <!-- ================= TAB: DASHBOARD / SUIVI ================= -->
-        <div id="tab-dashboard" class="space-y-6">
-            
-            <!-- Top Controls bar -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div class="flex flex-wrap items-center gap-3">
+        <!-- TAB 1: SAISIE & POIDS -->
+        <div id="tab-saisie" class="tab-content active space-y-6">
+            <div class="bg-stone-900 rounded-2xl shadow p-4 border border-stone-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="w-full md:w-1/2">
+                    <label class="block text-xs font-bold text-stone-300 mb-1"><i class="fa-solid fa-filter mr-1 text-rose-500"></i> Choisir la portée active :</label>
+                    <select id="admin-litter-select" onchange="onAdminLitterChange()" class="w-full border border-stone-700 rounded-xl px-4 py-2 text-sm font-semibold bg-stone-950 text-stone-200 outline-none focus:ring-2 focus:ring-rose-500">
+                    </select>
+                </div>
+                <div class="text-xs text-stone-400 text-right hidden md:block">
+                    <span>Changez de portée instantanément en un clic.</span>
+                </div>
+            </div>
+
+            <div class="bg-stone-900 rounded-2xl shadow p-6 border border-stone-800">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                     <div>
-                        <label class="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Portée</label>
-                        <select id="select-litter" onchange="onLitterChange()" class="bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-sm font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                            <!-- Rempli par JS -->
-                        </select>
-                    </div>
-
-                    <div id="container-select-puppy">
-                        <label class="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">Chiot</label>
-                        <select id="select-puppy" onchange="onPuppyChange()" class="bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-sm font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                            <!-- Rempli par JS -->
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Admin Action buttons -->
-                <div id="admin-actions-bar" class="flex flex-wrap items-center gap-2">
-                    <button onclick="openAddLitterModal()" class="bg-stone-900 hover:bg-stone-800 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors shadow-sm flex items-center space-x-1.5">
-                        <i class="fa-solid fa-plus text-xs"></i><span>Nouvelle portée</span>
-                    </button>
-                    <button onclick="openAddWeighingModal()" class="bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors shadow-sm flex items-center space-x-1.5">
-                        <i class="fa-solid fa-scale-balanced text-xs"></i><span>Ajouter pesée</span>
-                    </button>
-                    <button onclick="openModifyLitterModal()" class="bg-stone-200 hover:bg-stone-300 text-stone-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center space-x-1.5">
-                        <i class="fa-solid fa-pen-to-square text-xs"></i><span>Modifier portée</span>
-                    </button>
-                    <button onclick="exportLitterExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center space-x-1.5" title="Exporter cette portée en Excel">
-                        <i class="fa-file-excel fa-solid text-xs"></i><span>Excel</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Empty state when no litter -->
-            <div id="no-litter-state" class="hidden bg-white p-12 rounded-2xl shadow-sm border border-stone-200 text-center">
-                <div class="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400 text-2xl">
-                    <i class="fa-solid fa-dog"></i>
-                </div>
-                <h3 class="text-lg font-bold text-stone-800 mb-1">Aucune portée enregistrée</h3>
-                <p class="text-sm text-stone-500 mb-6">Commencez par créer votre première portée pour suivre le poids des chiots.</p>
-                <button onclick="openAddLitterModal()" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
-                    Créer une portée
-                </button>
-            </div>
-
-            <!-- Dashboard Content Container -->
-            <div id="dashboard-content" class="space-y-6">
-
-                <!-- Puppy Banner / Info Card -->
-                <div id="puppy-card" class="bg-white p-5 rounded-2xl shadow-sm border border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div class="flex items-center space-x-4">
-                        <div class="relative">
-                            <div id="puppy-avatar" class="w-16 h-16 rounded-full bg-stone-200 flex items-center justify-center text-xl font-bold text-stone-600 overflow-hidden border-2 border-stone-300 shadow-inner cursor-pointer" onclick="triggerPuppyPhotoUpload()" title="Changer la photo du chiot">
-                                <i class="fa-solid fa-dog text-stone-400"></i>
-                            </div>
-                            <input type="file" id="puppy-photo-input" accept="image/*" class="hidden" onchange="handlePuppyPhotoUpload(event)">
-                        </div>
-                        <div>
-                            <div class="flex items-center space-x-2">
-                                <h2 id="puppy-name" class="text-xl font-bold text-stone-900">-</h2>
-                                <span id="puppy-sex-badge" class="px-2 py-0.5 text-xs font-semibold rounded-full"></span>
-                            </div>
-                            <p id="puppy-subtitle" class="text-xs text-stone-500 mt-0.5">-</p>
-                        </div>
-                    </div>
-
-                    <!-- Key stats counters -->
-                    <div class="grid grid-cols-3 gap-3 w-full sm:w-auto">
-                        <div class="bg-stone-50 px-4 py-2.5 rounded-xl border border-stone-200 text-center">
-                            <span class="block text-[10px] uppercase tracking-wider text-stone-400 font-semibold">Poids naissance</span>
-                            <span id="stat-birth-weight" class="text-sm sm:text-base font-bold text-stone-800">- g</span>
-                        </div>
-                        <div class="bg-stone-50 px-4 py-2.5 rounded-xl border border-stone-200 text-center">
-                            <span class="block text-[10px] uppercase tracking-wider text-stone-400 font-semibold">Dernier poids</span>
-                            <span id="stat-latest-weight" class="text-sm sm:text-base font-bold text-brand-600">- g</span>
-                        </div>
-                        <div class="bg-stone-50 px-4 py-2.5 rounded-xl border border-stone-200 text-center">
-                            <span class="block text-[10px] uppercase tracking-wider text-stone-400 font-semibold">Gain total</span>
-                            <span id="stat-total-gain" class="text-sm sm:text-base font-bold text-emerald-600">- g</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Poids Doublé Alert Banner -->
-                <div id="weight-doubled-banner" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-center space-x-3 shadow-sm">
-                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg flex-shrink-0">
-                        <i class="fa-solid fa-award"></i>
+                        <h2 id="litter-main-title" class="text-xl font-bold text-stone-100 flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-plus text-rose-500"></i> Ajouter une pesée journalière
+                        </h2>
+                        <p id="litter-info-details" class="text-xs text-stone-400 mt-1">Date de naissance : - | Chiots : 0</p>
                     </div>
                     <div>
-                        <h4 class="text-sm font-bold text-emerald-900">Cap du poids de naissance doublé atteint ! 🎉</h4>
-                        <p id="weight-doubled-text" class="text-xs text-emerald-700"></p>
-                    </div>
-                </div>
-
-                <!-- Chart Container -->
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-stone-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-bold text-stone-800">Courbe de croissance</h3>
-                        <div class="text-xs text-stone-400">Poids en grammes (g)</div>
-                    </div>
-                    <div class="relative h-72 sm:h-80 w-full">
-                        <canvas id="growthChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Detailed Weight History Table -->
-                <div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                    <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
-                        <h3 class="text-base font-bold text-stone-800">Historique détaillé des pesées</h3>
-                        <span id="table-row-count" class="text-xs font-semibold text-stone-400">0 pesées</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-stone-50 border-b border-stone-200 text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
-                                    <th class="px-5 py-3">Date</th>
-                                    <th class="px-5 py-3">Âge</th>
-                                    <th class="px-5 py-3">Poids (g)</th>
-                                    <th class="px-5 py-3">Évolution / j</th>
-                                    <th class="px-5 py-3">Évolution totale</th>
-                                    <th class="px-5 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-table-body" class="divide-y divide-stone-200 text-sm">
-                                <!-- Rempli par JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- ================= TAB: ADMIN / GESTION & SUPPR ================= -->
-        <div id="tab-admin" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 space-y-6">
-                <div>
-                    <h2 class="text-lg font-bold text-stone-900 mb-1">Gestion des portées & données</h2>
-                    <p class="text-xs text-stone-500">Organisez vos portées, importez des fichiers Excel ou supprimez les données obsolètes.</p>
-                </div>
-
-                <hr class="border-stone-200">
-
-                <!-- Ordre des portées (Monter / Descendre) -->
-                <div class="space-y-3">
-                    <h3 class="text-sm font-bold text-stone-800"><i class="fa-solid fa-arrow-up-wide-short mr-2 text-stone-500"></i>Ordre d'affichage des portées</h3>
-                    <p class="text-xs text-stone-500">Modifiez l'ordre de vos portées pour les faire monter ou descendre dans la liste.</p>
-                    <div id="admin-litter-order-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                        <!-- Rempli par JS -->
-                    </div>
-                </div>
-
-                <hr class="border-stone-200">
-
-                <!-- Importer une ancienne portée (Excel) -->
-                <div class="space-y-3">
-                    <h3 class="text-sm font-bold text-stone-800"><i class="fa-file-excel fa-solid mr-2 text-emerald-600"></i>Importer une ancienne portée (Excel)</h3>
-                    <p class="text-xs text-stone-500">Sélectionnez un fichier Excel (Format: colonne Date, puis colonnes des noms de chiots avec les poids en grammes).</p>
-                    
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="block w-full text-xs text-stone-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-stone-200 rounded-xl bg-stone-50 p-1">
-                        <button onclick="handleExcelImport()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center space-x-1.5 shadow-sm">
-                            <i class="fa-solid fa-upload"></i><span>Importer la portée</span>
+                        <button onclick="addNewWeightRow()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Nouvelle date de pesée
                         </button>
                     </div>
                 </div>
-
-                <hr class="border-stone-200">
-
-                <!-- Suppression globale / réinitialisation -->
-                <div class="space-y-3">
-                    <h3 class="text-sm font-bold text-red-600"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Zone de danger</h3>
-                    <p class="text-xs text-stone-500">Supprimez définitivement la portée active ou réinitialisez l'ensemble des données de l'application.</p>
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="deleteActiveLitter()" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center space-x-1.5">
-                            <i class="fa-solid fa-trash-can"></i><span>Supprimer la portée active</span>
-                        </button>
-                        <button onclick="resetAllData()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-sm">
-                            <i class="fa-solid fa-bomb"></i><span>Tout effacer (Remise à zéro)</span>
-                        </button>
-                    </div>
+                <div class="overflow-x-auto">
+                    <table id="weights-table" class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-stone-800 text-stone-200 text-sm">
+                                <th class="p-3 rounded-tl-xl">Date</th>
+                                <th class="p-3 text-center rounded-tr-xl">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weights-tbody" class="divide-y divide-stone-800 text-sm"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-    </main>
-
-    <!-- ================= MODALS ================= -->
-
-    <!-- Modal: Ajouter / Modifier Portée -->
-    <div id="modal-litter" class="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-5 border border-stone-200">
-            <div class="flex items-center justify-between">
-                <h3 id="modal-litter-title" class="text-lg font-bold text-stone-900">Nouvelle portée</h3>
-                <button onclick="closeModal('modal-litter')" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <!-- TAB 2: COURBE (ADMIN) -->
+        <div id="tab-courbe" class="tab-content bg-stone-900 rounded-2xl shadow p-6 border border-stone-800 space-y-4">
+            <h2 class="text-xl font-bold text-stone-100 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de Croissance Ponderale (g)
+            </h2>
+            <div class="bg-stone-950 border border-stone-800 rounded-xl p-3 shadow-sm">
+                <span class="text-xs font-bold text-amber-500 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-500"></i> Poids doublé (x2) - Liste de la portée :</span>
+                <div id="admin-chart-double-summary" class="flex flex-wrap gap-2 text-xs text-stone-300 font-medium"></div>
             </div>
-            <div class="space-y-4">
+            <div style="position: relative; height: 420px; width: 100%;">
+                <canvas id="growthChart"></canvas>
+            </div>
+        </div>
+
+        <!-- TAB 3: POURCENTAGE -->
+        <div id="tab-pourcentage" class="tab-content bg-stone-900 rounded-2xl shadow p-6 border border-stone-800">
+            <h2 class="text-xl font-bold text-stone-100 mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier
+            </h2>
+            <p class="text-xs text-stone-400 mb-4">Seuil d'alerte critique : <span class="text-red-400 font-bold">&lt; 3%</span> (marqué en rouge)</p>
+            <div class="overflow-x-auto">
+                <table id="percent-table" class="w-full text-left border-collapse">
+                    <thead><tr class="bg-stone-800 text-stone-200 text-sm"><th class="p-3 rounded-l-xl">Date</th></tr></thead>
+                    <tbody class="divide-y divide-stone-800 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 4: PRISE DE POIDS -->
+        <div id="tab-prisedepoids" class="tab-content bg-stone-900 rounded-2xl shadow p-6 border border-stone-800">
+            <h2 class="text-xl font-bold text-stone-100 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes)
+            </h2>
+            <div class="overflow-x-auto">
+                <table id="gain-table" class="w-full text-left border-collapse">
+                    <thead><tr class="bg-stone-800 text-stone-200 text-sm"><th class="p-3 rounded-l-xl">Date</th></tr></thead>
+                    <tbody class="divide-y divide-stone-800 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 5: HISTOGRAMME -->
+        <div id="tab-histogramme" class="tab-content bg-stone-900 rounded-2xl shadow p-6 border border-stone-800 space-y-8">
+            <div>
+                <h2 class="text-xl font-bold text-stone-100 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-rose-500"></i> Histogramme - Prise de Poids par Jour (g)
+                </h2>
+                <div style="position: relative; height: 350px; width: 100%;"><canvas id="gainBarChart"></canvas></div>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-stone-100 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-rose-500"></i> Histogramme - Pourcentages Journaliers (%)
+                </h2>
+                <div style="position: relative; height: 350px; width: 100%;"><canvas id="percentBarChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- TAB 6: GESTION & SUPPRESSION -->
+        <div id="tab-archives" class="tab-content bg-stone-900 rounded-2xl shadow p-6 border border-stone-800 space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-stone-800 pb-4">
                 <div>
-                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">Nom de la portée</label>
-                    <input type="text" id="input-litter-name" placeholder="Ex: Portée U - Maman X Papa" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <h2 class="text-xl font-bold text-stone-100 flex items-center gap-2">
+                        <i class="fa-solid fa-box-archive text-rose-500"></i> Gestion de toutes vos portées
+                    </h2>
+                    <p class="text-xs text-stone-400 mt-1">Basculez, modifiez, supprimez, réorganisez ou importez vos portées.</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">Date de naissance</label>
-                    <input type="date" id="input-litter-birthdate" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">Chiots (1 par ligne : Nom, M ou F)</label>
-                    <textarea id="input-litter-puppies" rows="5" placeholder="Utopia, F&#10;Ushuaia, F&#10;Upsilon, M" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono"></textarea>
-                    <p class="text-[11px] text-stone-400 mt-1">Exemple : Nom du chiot suivi d'une virgule et de M (Mâle) ou F (Femelle).</p>
+                    <button onclick="document.getElementById('import-excel-input').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-file-import"></i> Importer une ancienne portée (Excel)
+                    </button>
+                    <input type="file" id="import-excel-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="importOldLitterExcel(this)">
                 </div>
             </div>
-            <div class="flex justify-end space-x-3 pt-2">
-                <button onclick="closeModal('modal-litter')" class="px-4 py-2.5 rounded-xl text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors">Annuler</button>
-                <button onclick="saveLitter()" class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">Enregistrer</button>
+            <div id="all-litters-list" class="space-y-3 mt-4"></div>
+        </div>
+
+        <!-- VUE FAMILLE CIBLÉE -->
+        <div id="family-view-container" class="hidden space-y-6">
+            <div class="bg-stone-900 border border-stone-800 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-shield-dog text-amber-500 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-stone-100">Espace Famille - Le Fief des Petits Crunchis</h3>
+                        <p class="text-xs text-stone-400">Suivi personnalisé de votre chiot ou vue d'ensemble de la portée (Mise à jour auto).</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button id="return-admin-btn" onclick="exitFamilyPortal()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i> Retour Élevage
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-stone-900 rounded-2xl shadow p-6 border border-stone-800 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-stone-950 p-4 rounded-2xl border border-stone-800">
+                    <div>
+                        <label class="block text-xs font-bold text-stone-300 mb-1">1. Choisir la portée :</label>
+                        <select id="family-litter-select" onchange="onFamilyLitterChange()" class="w-full border border-stone-700 rounded-xl px-4 py-2 text-sm font-semibold bg-stone-900 text-stone-100 outline-none focus:ring-2 focus:ring-rose-500">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-stone-300 mb-1">2. Votre chiot (ou Toute la portée) :</label>
+                        <select id="family-puppy-select" onchange="renderFamilyView()" class="w-full border border-stone-700 rounded-xl px-4 py-2 text-sm font-semibold bg-stone-900 text-stone-100 outline-none focus:ring-2 focus:ring-rose-500">
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                        <div class="flex items-center gap-3">
+                            <div id="family-puppy-photo-container"></div>
+                            <div>
+                                <h2 id="family-puppy-title" class="text-2xl font-bold text-stone-100">Courbe de Croissance</h2>
+                                <p id="family-puppy-subtitle" class="text-stone-400 text-sm">Le Fief des Petits Crunchis</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="family-stats-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-stone-950 border border-stone-800 rounded-xl p-4 text-center">
+                            <span class="text-xs text-stone-400 uppercase font-semibold">Poids de naissance</span>
+                            <p id="fam-birth-weight" class="text-xl font-bold text-stone-100 mt-1">- g</p>
+                        </div>
+                        <div class="bg-stone-950 border border-stone-800 rounded-xl p-4 text-center">
+                            <span class="text-xs text-stone-400 uppercase font-semibold">Dernier poids enregistré</span>
+                            <p id="fam-latest-weight" class="text-xl font-bold text-rose-400 mt-1">- g</p>
+                        </div>
+                        <div class="bg-stone-950 border border-stone-800 rounded-xl p-4 text-center">
+                            <span class="text-xs text-stone-400 uppercase font-semibold">Prise totale</span>
+                            <p id="fam-total-gain" class="text-xl font-bold text-emerald-400 mt-1">+ - g</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-stone-950 border border-stone-800 rounded-xl p-3 shadow-sm">
+                        <span class="text-xs font-bold text-amber-500 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-500"></i> Poids doublé (x2) :</span>
+                        <div id="fam-double-weight" class="flex flex-wrap gap-2 text-xs text-stone-300 font-medium"></div>
+                    </div>
+
+                    <div style="position: relative; height: 420px; width: 100%;">
+                        <canvas id="familyGrowthChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-8 pt-6 border-t border-stone-800">
+                    <div>
+                        <h3 class="text-xl font-bold text-stone-100 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier (%)
+                        </h3>
+                        <p class="text-xs text-stone-400 mb-4">Seuil d'alerte critique : <span class="text-red-400 font-bold">&lt; 3%</span></p>
+                        <div class="overflow-x-auto">
+                            <table id="family-percent-table" class="w-full text-left border-collapse">
+                                <thead><tr class="bg-stone-800 text-stone-200 text-sm"><th class="p-3 rounded-l-xl">Date</th></tr></thead>
+                                <tbody class="divide-y divide-stone-800 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-bold text-stone-100 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes)
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table id="family-gain-table" class="w-full text-left border-collapse">
+                                <thead><tr class="bg-stone-800 text-stone-200 text-sm"><th class="p-3 rounded-l-xl">Date</th></tr></thead>
+                                <tbody class="divide-y divide-stone-800 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Ajouter Pesée -->
-    <div id="modal-weighing" class="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-5 border border-stone-200">
-            <div class="flex items-center justify-between">
-                <h3 class="text-lg font-bold text-stone-900">Ajouter une pesée</h3>
-                <button onclick="closeModal('modal-weighing')" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <!-- MODAL: NOUVELLE PORTEE -->
+    <div id="newLitterModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-stone-900 rounded-2xl shadow-xl max-w-xl w-full p-6 space-y-6 border border-stone-800 text-stone-100">
+            <div class="flex justify-between items-center border-b border-stone-800 pb-4">
+                <h3 class="text-xl font-bold text-stone-100 flex items-center gap-2">
+                    <i class="fa-solid fa-dog text-rose-500"></i> Créer une nouvelle portée
+                </h3>
+                <button onclick="closeNewLitterModal()" class="text-stone-400 hover:text-stone-200 text-xl font-bold">&times;</button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">Date de la pesée</label>
-                    <input type="date" id="input-weighing-date" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <label class="block text-sm font-semibold text-stone-300 mb-1">Nom / Affixe de la portée :</label>
+                    <input type="text" id="modal-litter-name" value="Portée Shetland 2026" class="w-full border border-stone-700 rounded-xl px-4 py-2.5 text-sm bg-stone-950 text-stone-100 focus:ring-2 focus:ring-rose-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">Poids de chaque chiot (en grammes)</label>
-                    <div id="weighing-inputs-list" class="space-y-3 max-h-60 overflow-y-auto pr-2">
-                        <!-- Rempli dynamiquement par JS -->
-                    </div>
+                    <label class="block text-sm font-semibold text-stone-300 mb-1">Date de naissance :</label>
+                    <input type="date" id="modal-litter-date" value="2026-06-01" class="w-full border border-stone-700 rounded-xl px-4 py-2.5 text-sm bg-stone-950 text-stone-100 focus:ring-2 focus:ring-rose-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-stone-300 mb-1">Nombre de chiots nés :</label>
+                    <input type="number" id="modal-puppy-count" min="1" max="12" value="4" onchange="renderPuppyNameInputs()" class="w-full border border-stone-700 rounded-xl px-4 py-2.5 text-sm bg-stone-950 text-stone-100 focus:ring-2 focus:ring-rose-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-stone-300 mb-2">Détails des chiots (Nom, Sexe & Photo) :</label>
+                    <div id="modal-puppy-names-container" class="space-y-3 max-h-56 overflow-y-auto pr-2"></div>
                 </div>
             </div>
-            <div class="flex justify-end space-x-3 pt-2">
-                <button onclick="closeModal('modal-weighing')" class="px-4 py-2.5 rounded-xl text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors">Annuler</button>
-                <button onclick="saveWeighing()" class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">Enregistrer les poids</button>
+            <div class="flex justify-end gap-3 pt-4 border-t border-stone-800">
+                <button onclick="closeNewLitterModal()" class="px-4 py-2 rounded-xl text-stone-400 hover:bg-stone-800 font-semibold text-sm">Annuler</button>
+                <button onclick="generateNewLitter()" class="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-sm shadow">Créer la portée</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Configuration Supabase -->
-    <div id="modal-supabase" class="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-5 border border-stone-200">
-            <div class="flex items-center justify-between">
-                <h3 class="text-lg font-bold text-stone-900">Configuration Supabase</h3>
-                <button onclick="closeModal('modal-supabase')" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <!-- MODAL: MODIFIER LA PORTEE -->
+    <div id="editLitterModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-stone-900 rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-6 border border-stone-800 text-stone-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-stone-800 pb-4">
+                <h3 class="text-xl font-bold text-stone-100 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-rose-500"></i> Modifier la portée et ses chiots
+                </h3>
+                <button onclick="closeEditLitterModal()" class="text-stone-400 hover:text-stone-200 text-xl font-bold">&times;</button>
             </div>
-            <p class="text-xs text-stone-500">Entrez vos identifiants Supabase pour activer la synchronisation cloud multi-appareils.</p>
+            <input type="hidden" id="edit-litter-id">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">Supabase URL</label>
-                    <input type="text" id="input-supabase-url" placeholder="https://xxxx.supabase.co" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <label class="block text-sm font-semibold text-stone-300 mb-1">Nom de la portée :</label>
+                    <input type="text" id="edit-litter-name" class="w-full border border-stone-700 rounded-xl px-4 py-2.5 text-sm bg-stone-950 text-stone-100 focus:ring-2 focus:ring-rose-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1">Supabase Anon Key</label>
-                    <input type="password" id="input-supabase-key" placeholder="eyJhbGci..." class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <label class="block text-sm font-semibold text-stone-300 mb-1">Date de naissance :</label>
+                    <input type="date" id="edit-litter-date" class="w-full border border-stone-700 rounded-xl px-4 py-2.5 text-sm bg-stone-950 text-stone-100 focus:ring-2 focus:ring-rose-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-stone-300 mb-2">Composition des chiots :</label>
+                    <div id="edit-puppies-container" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
                 </div>
             </div>
-            <div class="flex justify-end space-x-3 pt-2">
-                <button onclick="closeModal('modal-supabase')" class="px-4 py-2.5 rounded-xl text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors">Annuler</button>
-                <button onclick="saveSupabaseConfig()" class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">Connecter & Synchroniser</button>
+            <div class="flex justify-end gap-3 pt-4 border-t border-stone-800">
+                <button onclick="closeEditLitterModal()" class="px-4 py-2 rounded-xl text-stone-400 hover:bg-stone-800 font-semibold text-sm">Annuler</button>
+                <button onclick="saveEditedLitter()" class="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-sm shadow">Enregistrer les modifications</button>
             </div>
         </div>
     </div>
 
-    <!-- MAIN SCRIPT -->
+    <!-- Inputs fichiers cachés -->
+    <input type="file" id="quick-photo-input" accept="image/*" class="hidden" onchange="handleQuickPhotoUpload(this)">
+    <input type="file" id="header-photo-input" accept="image/*" class="hidden" onchange="handleHeaderPhotoUpload(this)">
+
     <script>
-        // --- DATA STRUCTURE & LOCAL STORAGE ---
         let appData = {
-            litters: [],
-            headerLogo: null
+            headerPhoto: "",
+            litters: [
+                {
+                    id: "litter-1",
+                    name: "Portée Utopia 2026",
+                    birthDate: "2026-04-23",
+                    puppies: [
+                        { name: "BAIKA", sex: "Femelle", color: "#f43f5e", photo: "" },
+                        { name: "BLACK JACK", sex: "Mâle", color: "#38bdf8", photo: "" },
+                        { name: "BANKAI", sex: "Mâle", color: "#34d399", photo: "" },
+                        { name: "BLISS", sex: "Femelle", color: "#fbbf24", photo: "" }
+                    ],
+                    weights: [
+                        { date: "2026-04-23", values: [287, 265, 276, 298] },
+                        { date: "2026-06-10", values: [2180, 2050, 2078, 2180] }
+                    ]
+                }
+            ]
         };
 
-        let currentLitterId = null;
-        let currentPuppyId = null;
+        let currentLitterId = appData.litters[0].id;
+        let activePuppyIndexForPhoto = null;
+
+        function getLitters() {
+            return appData.litters || [];
+        }
+
+        function getCurrentLitter() {
+            let list = getLitters();
+            return list.find(l => l.id === currentLitterId) || list[0];
+        }
+
+        async function loadDataFromSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('portees')
+                    .select('*')
+                    .eq('id', 'main_data')
+                    .single();
+                
+                if (data && data.content) {
+                    if (Array.isArray(data.content)) {
+                        appData.litters = data.content;
+                    } else if (data.content.litters) {
+                        appData = data.content;
+                    }
+                    let list = getLitters();
+                    if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
+                        currentLitterId = list[0].id;
+                    }
+                    localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
+                }
+            } catch (err) {
+                let local = localStorage.getItem('crunchis_all_data') || localStorage.getItem('crunchis_all_litters');
+                if (local) {
+                    let parsed = JSON.parse(local);
+                    if (Array.isArray(parsed)) {
+                        appData.litters = parsed;
+                    } else {
+                        appData = parsed;
+                    }
+                }
+            }
+            renderHeaderLogo();
+        }
+
+        async function saveDataToSupabase() {
+            try {
+                const { error } = await supabaseClient
+                    .from('portees')
+                    .update({ content: appData })
+                    .eq('id', 'main_data');
+                
+                if (error) {
+                    console.error("Erreur de sauvegarde Supabase :", error.message);
+                }
+            } catch (err) {
+                console.error("Erreur de synchronisation cloud :", err);
+            }
+        }
+
+        function saveAllLitters() {
+            localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
+            saveDataToSupabase();
+        }
+
+        let familyChartInstance = null;
         let growthChartInstance = null;
-        let isEditingLitter = false;
-        let isFamilyMode = false;
+        let gainBarChartInstance = null;
+        let percentBarChartInstance = null;
 
-        // Supabase variables
-        let supabaseClient = null;
-        let supabaseConfig = { url: '', key: '' };
-        let isSyncing = false;
+        const defaultColors = ['#f43f5e', '#38bdf8', '#34d399', '#fbbf24', '#a78bfa', '#f472b6', '#38bdf8', '#a3e635', '#fb923c', '#818cf8'];
 
-        // Default local storage key
-        const STORAGE_KEY = 'fief_petits_crunchis_weights_v2';
-
-        window.addEventListener('DOMContentLoaded', () => {
-            // Vérifier mode famille (#famille dans l'URL)
-            if (window.location.hash.includes('famille')) {
-                isFamilyMode = true;
-                document.getElementById('admin-actions-bar').classList.add('hidden');
-                document.getElementById('btn-tab-admin').classList.add('hidden');
-            }
-
-            loadDataFromLocalStorage();
-            loadSupabaseConfig();
-
-            // Charger l'URL de l'image du logo global
-            updateHeaderLogoDisplay();
-
-            // Initialiser les dates par défaut des formulaires
-            const todayStr = new Date().toISOString().split('T')[0];
-            document.getElementById('input-weighing-date').value = todayStr;
-            document.getElementById('input-litter-birthdate').value = todayStr;
-
-            if (appData.litters.length > 0) {
-                currentLitterId = appData.litters[0].id;
-                const activeLitter = appData.litters[0];
-                if (activeLitter.puppies && activeLitter.puppies.length > 0) {
-                    currentPuppyId = activeLitter.puppies[0].id;
-                }
-            }
-
-            renderAll();
-        });
-
-        function loadDataFromLocalStorage() {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) {
-                try {
-                    appData = JSON.parse(raw);
-                } catch (e) {
-                    console.error("Erreur parsing localStorage", e);
-                }
+        function renderHeaderLogo() {
+            let container = document.getElementById('header-logo-container');
+            if (!container) return;
+            if (appData.headerPhoto) {
+                container.innerHTML = `<img src="${appData.headerPhoto}" class="w-14 h-14 rounded-full object-cover border-2 border-stone-700 shadow-md">`;
+            } else {
+                container.innerHTML = `<div class="w-14 h-14 rounded-full bg-stone-800 flex items-center justify-center text-rose-500 border border-stone-700 shadow-sm"><i class="fa-solid fa-dog text-2xl"></i></div>`;
             }
         }
 
-        function saveDataToLocalStorage() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-            syncToSupabase();
+        function triggerHeaderPhotoChange() {
+            document.getElementById('header-photo-input').value = "";
+            document.getElementById('header-photo-input').click();
         }
 
-        // --- NAVIGATION & TABS ---
-        function switchTab(tabName) {
-            const tabDashboard = document.getElementById('tab-dashboard');
-            const tabAdmin = document.getElementById('tab-admin');
-            const btnDashboard = document.getElementById('btn-tab-dashboard');
-            const btnAdmin = document.getElementById('btn-tab-admin');
-
-            if (tabName === 'dashboard') {
-                tabDashboard.classList.remove('hidden');
-                tabAdmin.classList.add('hidden');
-                btnDashboard.className = "px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-brand-500 text-white shadow-sm";
-                btnAdmin.className = "px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-stone-600 hover:bg-stone-100";
-            } else if (tabName === 'admin') {
-                tabDashboard.classList.add('hidden');
-                tabAdmin.classList.remove('hidden');
-                btnAdmin.className = "px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-brand-500 text-white shadow-sm";
-                btnDashboard.className = "px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-stone-600 hover:bg-stone-100";
-                renderAdminLitterOrderList();
+        function handleHeaderPhotoUpload(input) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    appData.headerPhoto = e.target.result;
+                    saveAllLitters();
+                    renderHeaderLogo();
+                };
+                reader.readAsDataURL(input.files[0]);
             }
         }
 
-        // --- RENDER MASTER ---
-        function renderAll() {
-            renderLitterSelect();
-            renderAdminLitterOrderList();
-
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            const noLitterState = document.getElementById('no-litter-state');
-            const dashboardContent = document.getElementById('dashboard-content');
-
-            if (!activeLitter || appData.litters.length === 0) {
-                noLitterState.classList.remove('hidden');
-                dashboardContent.classList.add('hidden');
-                return;
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-rose-600', 'text-white', 'shadow');
+                el.classList.add('bg-stone-800', 'text-stone-300');
+            });
+            document.getElementById('tab-' + tabId).classList.add('active');
+            const btn = document.getElementById('btn-tab-' + tabId);
+            if (btn) {
+                btn.classList.remove('bg-stone-800', 'text-stone-300');
+                btn.classList.add('bg-rose-600', 'text-white', 'shadow');
             }
 
-            noLitterState.classList.add('hidden');
-            dashboardContent.classList.remove('hidden');
+            setTimeout(() => {
+                if (tabId === 'courbe') updateCharts();
+                if (tabId === 'histogramme') updateBarCharts();
+            }, 50);
 
-            renderPuppySelect(activeLitter);
-
-            const activePuppy = activeLitter.puppies.find(p => p.id === currentPuppyId);
-            if (!activePuppy && activeLitter.puppies.length > 0) {
-                currentPuppyId = activeLitter.puppies[0].id;
-                activePuppy = activeLitter.puppies[0];
-            }
-
-            if (!activePuppy) return;
-
-            renderPuppyDetails(activeLitter, activePuppy);
-            renderGrowthChart(activeLitter, activePuppy);
-            renderHistoryTable(activeLitter, activePuppy);
+            if (tabId === 'archives') renderAllLittersList();
         }
 
-        function renderLitterSelect() {
-            const select = document.getElementById('select-litter');
+        function initApp() {
+            let litter = getCurrentLitter();
+            if (!litter) return;
+            document.getElementById('litter-main-title').innerHTML = `<i class="fa-solid fa-calendar-plus text-rose-500"></i> ${litter.name} - Pesées journalières`;
+            let formattedDate = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
+            document.getElementById('litter-info-details').innerText = `Date de naissance : ${formattedDate} | Chiots : ${litter.puppies.length}`;
+            
+            renderHeaderLogo();
+            updateAdminLitterSelect();
+            renderWeightsTable();
+            renderPercentTable();
+            renderGainTable();
+            updateCharts();
+            updateBarCharts();
+        }
+
+        function updateAdminLitterSelect() {
+            const select = document.getElementById('admin-litter-select');
+            if (!select) return;
             select.innerHTML = '';
-            appData.litters.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l.id;
-                opt.textContent = l.name + (l.birthDate ? ` (${formatDateDisplay(l.birthDate)})` : '');
-                if (l.id === currentLitterId) opt.selected = true;
-                select.appendChild(opt);
+            let list = getLitters();
+            list.forEach(l => {
+                select.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>🐾 ${l.name} (${l.puppies.length} chiots)</option>`;
             });
         }
 
-        function onLitterChange() {
-            const select = document.getElementById('select-litter');
-            currentLitterId = select.value;
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            if (activeLitter && activeLitter.puppies.length > 0) {
-                currentPuppyId = activeLitter.puppies[0].id;
-            } else {
-                currentPuppyId = null;
-            }
-            renderAll();
+        function onAdminLitterChange() {
+            currentLitterId = document.getElementById('admin-litter-select').value;
+            initApp();
         }
 
-        function renderPuppySelect(litter) {
-            const select = document.getElementById('select-puppy');
-            select.innerHTML = '';
-            if (!litter.puppies || litter.puppies.length === 0) return;
+        async function openFamilyPortal() {
+            await loadDataFromSupabase();
+            document.getElementById('admin-nav').classList.add('hidden');
+            document.querySelector('header button[onclick="openNewLitterModal()"]').classList.add('hidden');
+            document.querySelector('header button[onclick="exportToExcel()"]').classList.add('hidden');
 
-            litter.puppies.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                const sexSymbol = p.sex === 'M' ? '♂' : '♀';
-                opt.textContent = `${p.name} (${sexSymbol})`;
-                if (p.id === currentPuppyId) opt.selected = true;
-                select.appendChild(opt);
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('family-view-container').classList.remove('hidden');
+
+            if (window.location.hash === '#famille') {
+                document.getElementById('return-admin-btn').classList.add('hidden');
+            } else {
+                document.getElementById('return-admin-btn').classList.remove('hidden');
+            }
+
+            updateFamilyLitterSelect();
+        }
+
+        function updateFamilyLitterSelect() {
+            const litterSelect = document.getElementById('family-litter-select');
+            litterSelect.innerHTML = '';
+            let list = getLitters();
+            list.forEach(l => {
+                litterSelect.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>${l.name}</option>`;
+            });
+            updateFamilyPuppySelect();
+        }
+
+        function onFamilyLitterChange() {
+            currentLitterId = document.getElementById('family-litter-select').value;
+            updateFamilyPuppySelect();
+        }
+
+        function updateFamilyPuppySelect() {
+            let litter = getCurrentLitter();
+            const select = document.getElementById('family-puppy-select');
+            select.innerHTML = '';
+            
+            select.innerHTML += `<option value="all">🐾 Toute la portée (Vue d'ensemble)</option>`;
+            litter.puppies.forEach((p, idx) => {
+                let icon = p.sex === 'Mâle' ? '♂' : '♀';
+                select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})</option>`;
+            });
+            renderFamilyView();
+        }
+
+        function exitFamilyPortal() {
+            document.getElementById('family-view-container').classList.add('hidden');
+            document.getElementById('admin-nav').classList.remove('hidden');
+            document.querySelector('header button[onclick="openNewLitterModal()"]').classList.remove('hidden');
+            document.querySelector('header button[onclick="exportToExcel()"]').classList.remove('hidden');
+
+            switchTab('saisie');
+            initApp();
+        }
+
+        function calculateDoubleWeight(litter, pIdx) {
+            if (litter.weights.length === 0 || !litter.birthDate) return "Non atteint";
+            let birthW = litter.weights[0].values[pIdx];
+            if (!birthW || birthW <= 0) return "Non atteint";
+
+            let doubleTarget = birthW * 2;
+            let birthTime = new Date(litter.birthDate).getTime();
+
+            for (let w of litter.weights) {
+                let val = w.values[pIdx];
+                if (val && val >= doubleTarget) {
+                    let wTime = new Date(w.date).getTime();
+                    let diffDays = Math.round((wTime - birthTime) / (1000 * 60 * 60 * 24));
+                    return `${w.date.split('-').reverse().join('/')} (J+${diffDays})`;
+                }
+            }
+            return "Non atteint";
+        }
+
+        function updateAdminChartDoubleSummary() {
+            let litter = getCurrentLitter();
+            let container = document.getElementById('admin-chart-double-summary');
+            if (!container) return;
+            container.innerHTML = '';
+
+            litter.puppies.forEach((p, pIdx) => {
+                let res = calculateDoubleWeight(litter, pIdx);
+                container.innerHTML += `
+                    <div class="bg-stone-900 px-2.5 py-1 rounded-lg border border-stone-800 shadow-sm inline-block">
+                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : <span class="text-stone-200 font-semibold">${res}</span>
+                    </div>
+                `;
             });
         }
 
-        function onPuppyChange() {
-            const select = document.getElementById('select-puppy');
-            currentPuppyId = select.value;
-            renderAll();
-        }
+        function renderFamilyView() {
+            let litter = getCurrentLitter();
+            let selectedVal = document.getElementById('family-puppy-select').value;
+            let canvasCtx = document.getElementById('familyGrowthChart').getContext('2d');
 
-        function renderPuppyDetails(litter, puppy) {
-            document.getElementById('puppy-name').textContent = puppy.name;
-            
-            const badge = document.getElementById('puppy-sex-badge');
-            if (puppy.sex === 'M') {
-                badge.textContent = "Mâle ♂";
-                badge.className = "px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800";
+            if (familyChartInstance) familyChartInstance.destroy();
+
+            let datasets = [];
+            let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
+            let famDoubleContainer = document.getElementById('fam-double-weight');
+            let photoContainer = document.getElementById('family-puppy-photo-container');
+
+            if (selectedVal === 'all') {
+                document.getElementById('family-puppy-title').innerText = litter.name;
+                document.getElementById('family-puppy-subtitle').innerText = "Suivi de croissance de toute la portée";
+                photoContainer.innerHTML = '';
+                
+                litter.puppies.forEach((puppy, pIdx) => {
+                    let data = litter.weights.map(w => w.values[pIdx] || null);
+                    datasets.push({
+                        label: puppy.name,
+                        data: data,
+                        borderColor: puppy.color || defaultColors[pIdx % defaultColors.length],
+                        backgroundColor: puppy.color || defaultColors[pIdx % defaultColors.length],
+                        borderWidth: 3,
+                        tension: 0.2
+                    });
+                });
+
+                document.getElementById('fam-birth-weight').innerText = "Portée";
+                document.getElementById('fam-latest-weight').innerText = "Globale";
+                document.getElementById('fam-total-gain').innerText = litter.puppies.length + " chiots";
+                
+                famDoubleContainer.innerHTML = '';
+                litter.puppies.forEach((p, idx) => {
+                    let res = calculateDoubleWeight(litter, idx);
+                    famDoubleContainer.innerHTML += `
+                        <div class="bg-stone-900 px-2.5 py-1 rounded-lg border border-stone-800 shadow-sm inline-block">
+                            <span class="font-bold" style="color:${p.color};">${p.name}</span> : <span class="text-stone-200 font-semibold">${res}</span>
+                        </div>
+                    `;
+                });
+
             } else {
-                badge.textContent = "Femelle ♀";
-                badge.className = "px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-100 text-rose-800";
-            }
+                let pIdx = parseInt(selectedVal);
+                let puppy = litter.puppies[pIdx];
+                document.getElementById('family-puppy-title').innerText = puppy.name;
+                let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
+                document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
 
-            document.getElementById('puppy-subtitle').textContent = `Portée : ${litter.name} • Né(e) le ${formatDateDisplay(litter.birthDate)}`;
-
-            // Avatar photo chiot
-            const avatarImg = document.getElementById('puppy-avatar').querySelector('img');
-            const avatarIcon = document.getElementById('puppy-avatar').querySelector('i');
-            if (puppy.photo) {
-                avatarImg.src = puppy.photo;
-                avatarImg.classList.remove('hidden');
-                avatarIcon.classList.add('hidden');
-            } else {
-                avatarImg.classList.add('hidden');
-                avatarIcon.classList.remove('hidden');
-            }
-
-            // Calculs statistiques
-            const sortedWeighings = getSortedWeighings(litter, puppy);
-            const birthWeight = getBirthWeight(litter, puppy);
-            
-            document.getElementById('stat-birth-weight').textContent = birthWeight !== null ? `${birthWeight} g` : '- g';
-
-            if (sortedWeighings.length > 0) {
-                const latest = sortedWeighings[sortedWeighings.length - 1];
-                document.getElementById('stat-latest-weight').textContent = `${latest.weight} g`;
-                const gain = latest.weight - birthWeight;
-                const sign = gain >= 0 ? '+' : '';
-                const totalGainEl = document.getElementById('stat-total-gain');
-                totalGainEl.textContent = `${sign}${gain} g`;
-                totalGainEl.className = `text-sm sm:text-base font-bold ${gain >= 0 ? 'text-emerald-600' : 'text-red-600'}`;
-
-                // Test poids doublé
-                const banner = document.getElementById('weight-doubled-banner');
-                const bannerText = document.getElementById('weight-doubled-text');
-                if (birthWeight && latest.weight >= (birthWeight * 2)) {
-                    banner.classList.remove('hidden');
-                    bannerText.textContent = `${puppy.name} a atteint ou dépassé le double de son poids de naissance (${latest.weight} g pour ${birthWeight} g de naissance) le ${formatDateDisplay(latest.date)}.`;
+                if (puppy.photo) {
+                    photoContainer.innerHTML = `<img src="${puppy.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-stone-700 shadow-sm">`;
                 } else {
-                    banner.classList.add('hidden');
+                    photoContainer.innerHTML = `<div class="w-14 h-14 rounded-full bg-stone-800 flex items-center justify-center text-stone-400 border border-stone-700"><i class="fa-solid fa-dog text-xl"></i></div>`;
                 }
-            } else {
-                document.getElementById('stat-latest-weight').textContent = '- g';
-                document.getElementById('stat-total-gain').textContent = '- g';
-                document.getElementById('weight-doubled-banner').classList.add('hidden');
+
+                let data = litter.weights.map(w => w.values[pIdx] || null);
+                datasets.push({
+                    label: puppy.name,
+                    data: data,
+                    borderColor: puppy.color,
+                    backgroundColor: puppy.color,
+                    borderWidth: 4,
+                    tension: 0.2
+                });
+
+                let birthW = litter.weights.length > 0 ? (litter.weights[0].values[pIdx] || '-') : '-';
+                let latestW = litter.weights.length > 0 ? (litter.weights[litter.weights.length - 1].values[pIdx] || '-') : '-';
+                let gain = (birthW !== '-' && latestW !== '-') ? (latestW - birthW) : '-';
+
+                document.getElementById('fam-birth-weight').innerText = birthW + " g";
+                document.getElementById('fam-latest-weight').innerText = latestW + " g";
+                document.getElementById('fam-total-gain').innerText = (gain > 0 ? "+" : "") + gain + " g";
+
+                let doubleDateStr = calculateDoubleWeight(litter, pIdx);
+                famDoubleContainer.innerHTML = `<div class="bg-stone-900 px-2.5 py-1 rounded-lg border border-stone-800 shadow-sm inline-block"><span class="font-bold" style="color:${puppy.color};">${puppy.name}</span> : <span class="text-stone-200 font-semibold">${doubleDateStr}</span></div>`;
             }
-        }
 
-        // --- CHART.JS RENDERING ---
-        function renderGrowthChart(litter, puppy) {
-            const ctx = document.getElementById('growthChart').getContext('2d');
-            const sortedWeighings = getSortedWeighings(litter, puppy);
-
-            const labels = sortedWeighings.map(w => formatDateDisplay(w.date));
-            const dataWeights = sortedWeighings.map(w => w.weight);
-
-            // Calculer ligne de poids double si birthWeight existe
-            const birthWeight = getBirthWeight(litter, puppy);
-            const doubleData = birthWeight ? sortedWeighings.map(() => birthWeight * 2) : [];
-
-            if (growthChartInstance) {
-                growthChartInstance.destroy();
-            }
-
-            growthChartInstance = new Chart(ctx, {
+            familyChartInstance = new Chart(canvasCtx, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Poids (g)',
-                            data: dataWeights,
-                            borderColor: '#e07a5f',
-                            backgroundColor: 'rgba(224, 122, 95, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.2,
-                            pointBackgroundColor: '#ffffff',
-                            pointBorderColor: '#e07a5f',
-                            pointBorderWidth: 2,
-                            pointRadius: 5,
-                            pointHoverRadius: 7
-                        },
-                        ...(birthWeight ? [{
-                            label: 'Double naissance (Objectif)',
-                            data: doubleData,
-                            borderColor: '#10b981',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            pointRadius: 0,
-                            fill: false
-                        }] : [])
-                    ]
-                },
+                data: { labels: labels, datasets: datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: birthWeight ? true : false, position: 'bottom' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return ` Poids : ${context.parsed.y} g`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            grid: { color: '#f5f5f4' }
-                        },
-                        x: {
-                            grid: { display: false }
-                        }
-                    }
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: false } }
                 }
             });
+
+            renderFamilyTables(selectedVal);
         }
 
-        // --- TABLE RENDERING ---
-        function renderHistoryTable(litter, puppy) {
-            const tbody = document.getElementById('history-table-body');
-            tbody.innerHTML = '';
-            const sortedWeighings = getSortedWeighings(litter, puppy);
-            document.getElementById('table-row-count').textContent = `${sortedWeighings.length} pesées`;
+        function triggerQuickPhotoChange(pIdx) {
+            activePuppyIndexForPhoto = pIdx;
+            document.getElementById('quick-photo-input').value = "";
+            document.getElementById('quick-photo-input').click();
+        }
 
-            if (sortedWeighings.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-6 text-center text-stone-400 text-xs">Aucune pesée enregistrée pour ce chiot.</td></tr>`;
-                return;
+        function handleQuickPhotoUpload(input) {
+            if (input.files && input.files[0] && activePuppyIndexForPhoto !== null) {
+                let reader = new FileReader();
+                let litter = getCurrentLitter();
+                reader.onload = function(e) {
+                    litter.puppies[activePuppyIndexForPhoto].photo = e.target.result;
+                    saveAllLitters();
+                    initApp();
+                };
+                reader.readAsDataURL(input.files[0]);
             }
+        }
 
-            const birthWeight = getBirthWeight(litter, puppy);
-            const birthDateObj = new Date(litter.birthDate);
+        function renderWeightsTable() {
+            let litter = getCurrentLitter();
+            let tbody = document.getElementById('weights-tbody');
+            tbody.innerHTML = '';
 
-            sortedWeighings.forEach((w, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-stone-50/80 transition-colors";
+            litter.weights.forEach((wRow, wIdx) => {
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-stone-800/50 transition";
 
-                const weighDateObj = new Date(w.date);
-                const diffTime = Math.abs(weighDateObj - birthDateObj);
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                const ageStr = diffDays === 0 ? "Jour de naissance" : `J+${diffDays}`;
+                let tdDate = document.createElement('td');
+                tdDate.className = "p-3 font-semibold";
+                tdDate.innerHTML = `<input type="date" value="${wRow.date}" onchange="updateWeightDate(${wIdx}, this.value)" class="border border-stone-700 rounded-lg px-2 py-1 text-sm bg-stone-950 text-stone-100 outline-none">`;
+                tr.appendChild(tdDate);
 
-                // Évolution / jour et totale par rapport à la pesée précédente / naissance
-                let dailyGainStr = '-';
-                let totalGainStr = '-';
+                litter.puppies.forEach((p, pIdx) => {
+                    let tdVal = document.createElement('td');
+                    tdVal.className = "p-3";
+                    tdVal.innerHTML = `<input type="number" value="${wRow.values[pIdx] !== undefined ? wRow.values[pIdx] : ''}" placeholder="Poids g" onchange="updateWeightVal(${wIdx}, ${pIdx}, this.value)" class="w-24 border border-stone-700 rounded-lg px-2 py-1 text-sm bg-stone-950 text-stone-100 outline-none text-center font-medium">`;
+                    tr.appendChild(tdVal);
+                });
 
-                if (birthWeight !== null) {
-                    const totalGain = w.weight - birthWeight;
-                    const signT = totalGain >= 0 ? '+' : '';
-                    totalGainStr = `${signT}${totalGain} g`;
-                }
+                let tdActions = document.createElement('td');
+                tdActions.className = "p-3 text-center";
+                tdActions.innerHTML = `<button onclick="deleteWeightRow(${wIdx})" class="text-stone-500 hover:text-red-400 p-1 rounded-lg"><i class="fa-solid fa-trash"></i></button>`;
+                tr.appendChild(tdActions);
 
-                if (index > 0) {
-                    const prev = sortedWeighings[index - 1];
-                    const prevDateObj = new Date(prev.date);
-                    const daysBetween = Math.max(1, Math.round((weighDateObj - prevDateObj) / (1000 * 60 * 60 * 24)));
-                    const diffWeight = w.weight - prev.weight;
-                    const daily = Math.round((diffWeight / daysBetween) * 10) / 10;
-                    const signD = daily >= 0 ? '+' : '';
-                    dailyGainStr = `${signD}${daily} g/j`;
-                } else if (birthWeight !== null) {
-                    dailyGainStr = 'Base';
-                }
-
-                let deleteBtnHtml = '';
-                if (!isFamilyMode) {
-                    deleteBtnHtml = `<button onclick="deleteWeighing('${w.date}')" class="text-stone-400 hover:text-red-600 transition-colors p-1" title="Supprimer cette pesée"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
-                }
-
-                tr.innerHTML = `
-                    <td class="px-5 py-3.5 font-medium text-stone-800">${formatDateDisplay(w.date)}</td>
-                    <td class="px-5 py-3.5 text-stone-500">${ageStr}</td>
-                    <td class="px-5 py-3.5 font-bold text-stone-900">${w.weight} g</td>
-                    <td class="px-5 py-3.5 text-stone-600">${dailyGainStr}</td>
-                    <td class="px-5 py-3.5 font-medium text-emerald-600">${totalGainStr}</td>
-                    <td class="px-5 py-3.5 text-right">${deleteBtnHtml}</td>
-                `;
                 tbody.appendChild(tr);
             });
+
+            let theadTr = document.querySelector('#weights-table thead tr');
+            theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
+            litter.puppies.forEach((p, pIdx) => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-8 h-8 rounded-full object-cover inline-block mr-1.5 border-2 border-stone-700 shadow-sm">` : `<i class="fa-solid fa-dog mr-1"></i>`;
+                theadTr.innerHTML += `
+                    <th class="p-3 text-center" style="color:${p.color};">
+                        <div class="inline-flex items-center justify-center gap-1.5 cursor-pointer group" onclick="triggerQuickPhotoChange(${pIdx})" title="Cliquer pour modifier la photo">
+                            ${imgTag}
+                            <span class="group-hover:underline">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</span>
+                            <i class="fa-solid fa-camera text-[10px] text-rose-500 opacity-70 group-hover:opacity-100 ml-0.5"></i>
+                        </div>
+                    </th>`;
+            });
+            theadTr.innerHTML += '<th class="p-3 text-center rounded-r-xl">Actions</th>';
         }
 
-        // --- HELPER FUNCTIONS ---
-        function getSortedWeighings(litter, puppy) {
-            if (!puppy || !puppy.weighings) return [];
-            return [...puppy.weighings].sort((a, b) => new Date(a.date) - new Date(b.date));
+        function addNewWeightRow() {
+            let litter = getCurrentLitter();
+            let today = new Date().toISOString().split('T')[0];
+            let lastVals = litter.weights.length > 0 ? [...litter.weights[litter.weights.length - 1].values] : litter.puppies.map(() => 0);
+            litter.weights.push({ date: today, values: lastVals });
+            saveAllLitters();
+            initApp();
         }
 
-        function getBirthWeight(litter, puppy) {
-            const sorted = getSortedWeighings(litter, puppy);
-            if (sorted.length === 0) return null;
-            // On prend la première pesée ou celle correspondant à la date de naissance si elle existe
-            const birthWeigh = sorted.find(w => w.date === litter.birthDate);
-            return birthWeigh ? birthWeigh.weight : sorted[0].weight;
+        function updateWeightDate(wIdx, val) {
+            let litter = getCurrentLitter();
+            litter.weights[wIdx].date = val;
+            saveAllLitters();
+            updateAdminChartDoubleSummary();
         }
 
-        function formatDateDisplay(dateStr) {
-            if (!dateStr) return '';
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                return `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
-            return dateStr;
+        function updateWeightVal(wIdx, pIdx, val) {
+            let litter = getCurrentLitter();
+            litter.weights[wIdx].values[pIdx] = val === '' ? 0 : parseFloat(val);
+            saveAllLitters();
+            updateAdminChartDoubleSummary();
+            renderPercentTable();
+            renderGainTable();
         }
 
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
+        function deleteWeightRow(wIdx) {
+            let litter = getCurrentLitter();
+            litter.weights.splice(wIdx, 1);
+            saveAllLitters();
+            initApp();
         }
 
-        // --- PHOTO MANAGEMENT ---
-        function triggerHeaderLogoUpload() {
-            if (isFamilyMode) return;
-            document.getElementById('header-logo-input').click();
-        }
+        function updateCharts() {
+            let litter = getCurrentLitter();
+            let ctx = document.getElementById('growthChart').getContext('2d');
+            if (growthChartInstance) growthChartInstance.destroy();
 
-        function handleHeaderLogoUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                appData.headerLogo = e.target.result;
-                saveDataToLocalStorage();
-                updateHeaderLogoDisplay();
-            };
-            reader.readAsDataURL(file);
-        }
+            let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
+            let datasets = litter.puppies.map((p, idx) => ({
+                label: p.name,
+                data: litter.weights.map(w => w.values[idx] || null),
+                borderColor: p.color,
+                backgroundColor: p.color,
+                borderWidth: 3,
+                tension: 0.2
+            }));
 
-        function updateHeaderLogoDisplay() {
-            const container = document.getElementById('header-logo-container');
-            const img = document.getElementById('header-logo-img');
-            const icon = document.getElementById('header-logo-icon');
-
-            if (appData.headerLogo) {
-                img.src = appData.headerLogo;
-                img.classList.remove('hidden');
-                icon.classList.add('hidden');
-            } else {
-                img.classList.add('hidden');
-                icon.classList.remove('hidden');
-            }
-        }
-
-        function triggerPuppyPhotoUpload() {
-            if (isFamilyMode) return;
-            document.getElementById('puppy-photo-input').click();
-        }
-
-        function handlePuppyPhotoUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-                if (!activeLitter) return;
-                const puppy = activeLitter.puppies.find(p => p.id === currentPuppyId);
-                if (!puppy) return;
-
-                puppy.photo = e.target.result;
-                saveDataToLocalStorage();
-                renderAll();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // --- LITTER ACTIONS (CREATE / MODIFY / DELETE / REORDER) ---
-        function openAddLitterModal() {
-            isEditingLitter = false;
-            document.getElementById('modal-litter-title').textContent = "Nouvelle portée";
-            document.getElementById('input-litter-name').value = '';
-            document.getElementById('input-litter-birthdate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('input-litter-puppies').value = "Chiot 1, M\nChiot 2, F";
-            document.getElementById('modal-litter').classList.remove('hidden');
-        }
-
-        function openModifyLitterModal() {
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            if (!activeLitter) return;
-
-            isEditingLitter = true;
-            document.getElementById('modal-litter-title').textContent = "Modifier la portée";
-            document.getElementById('input-litter-name').value = activeLitter.name;
-            document.getElementById('input-litter-birthdate').value = activeLitter.birthDate;
-
-            const puppiesText = activeLitter.puppies.map(p => `${p.name}, ${p.sex}`).join('\n');
-            document.getElementById('input-litter-puppies').value = puppiesText;
-
-            document.getElementById('modal-litter').classList.remove('hidden');
-        }
-
-        function saveLitter() {
-            const name = document.getElementById('input-litter-name').value.trim();
-            const birthDate = document.getElementById('input-litter-birthdate').value;
-            const puppiesRaw = document.getElementById('input-litter-puppies').value.trim();
-
-            if (!name || !birthDate) {
-                alert("Veuillez renseigner le nom et la date de naissance.");
-                return;
-            }
-
-            const puppyLines = puppiesRaw.split('\n');
-            const puppies = [];
-            puppyLines.forEach((line, index) => {
-                const parts = line.split(',');
-                if (parts.length >= 1) {
-                    const pName = parts[0].trim();
-                    let pSex = parts[1] ? parts[1].trim().toUpperCase() : 'M';
-                    if (pSex !== 'M' && pSex !== 'F') pSex = 'M';
-                    if (pName) {
-                        puppies.push({
-                            id: 'p_' + Date.now() + '_' + index,
-                            name: pName,
-                            sex: pSex,
-                            photo: null,
-                            weighings: []
-                        });
-                    }
-                }
+            growthChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false }
             });
 
-            if (puppies.length === 0) {
-                alert("Veuillez ajouter au moins un chiot.");
-                return;
-            }
-
-            if (isEditingLitter) {
-                const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-                if (activeLitter) {
-                    activeLitter.name = name;
-                    activeLitter.birthDate = birthDate;
-                    
-                    // Conserver les pesées des chiots existants si les noms correspondent
-                    puppies.forEach(newP => {
-                        const existing = activeLitter.puppies.find(ep => ep.name.toLowerCase() === newP.name.toLowerCase());
-                        if (existing) {
-                            newP.id = existing.id;
-                            newP.weighings = existing.weighings;
-                            newP.photo = existing.photo;
-                        }
-                    });
-                    activeLitter.puppies = puppies;
-                }
-            } else {
-                const newLitter = {
-                    id: 'litter_' + Date.now(),
-                    name: name,
-                    birthDate: birthDate,
-                    puppies: puppies
-                };
-                appData.litters.unshift(newLitter);
-                currentLitterId = newLitter.id;
-                currentPuppyId = newLitter.puppies[0].id;
-            }
-
-            saveDataToLocalStorage();
-            closeModal('modal-litter');
-            renderAll();
+            updateAdminChartDoubleSummary();
         }
 
-        function deleteActiveLitter() {
-            if (!currentLitterId) return;
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            if (!activeLitter) return;
+        function updateBarCharts() {
+            let litter = getCurrentLitter();
+            let ctxGain = document.getElementById('gainBarChart').getContext('2d');
+            if (gainBarChartInstance) gainBarChartInstance.destroy();
 
-            if (confirm(`Voulez-vous vraiment supprimer la portée "${activeLitter.name}" et tous ses chiots ?`)) {
-                appData.litters = appData.litters.filter(l => l.id !== currentLitterId);
-                if (appData.litters.length > 0) {
-                    currentLitterId = appData.litters[0].id;
-                    currentPuppyId = appData.litters[0].puppies.length > 0 ? appData.litters[0].puppies[0].id : null;
-                } else {
-                    currentLitterId = null;
-                    currentPuppyId = null;
+            let labels = [];
+            for (let i = 1; i < litter.weights.length; i++) {
+                labels.push(litter.weights[i].date.split('-').reverse().join('/'));
+            }
+
+            let datasetsGain = litter.puppies.map((p, pIdx) => {
+                let data = [];
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    data.push(curr > 0 && prev > 0 ? curr - prev : 0);
                 }
-                saveDataToLocalStorage();
-                renderAll();
+                return { label: p.name, data: data, backgroundColor: p.color };
+            });
+
+            gainBarChartInstance = new Chart(ctxGain, {
+                type: 'bar',
+                data: { labels: labels, datasets: datasetsGain },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            let ctxPercent = document.getElementById('percentBarChart').getContext('2d');
+            if (percentBarChartInstance) percentBarChartInstance.destroy();
+
+            let datasetsPercent = litter.puppies.map((p, pIdx) => {
+                let data = [];
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : 0;
+                    data.push(pct);
+                }
+                return { label: p.name, data: data, backgroundColor: p.color };
+            });
+
+            percentBarChartInstance = new Chart(ctxPercent, {
+                type: 'bar',
+                data: { labels: labels, datasets: datasetsPercent },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function renderPercentTable() {
+            let litter = getCurrentLitter();
+            let table = document.getElementById('percent-table');
+            let theadTr = table.querySelector('thead tr');
+            theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
+            litter.puppies.forEach(p => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-stone-700">` : "";
+                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            });
+
+            let tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            for (let i = 1; i < litter.weights.length; i++) {
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-stone-800/50";
+                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+
+                litter.puppies.forEach((p, pIdx) => {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
+                    let colorClass = (pct !== null && pct < 3) ? "text-red-400 font-bold bg-red-950/40" : "text-stone-200";
+                    tr.innerHTML += `<td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
+                });
+                tbody.appendChild(tr);
             }
         }
 
-        // --- REORDER LITTERS (MONTER / DESCENDRE) ---
-        function renderAdminLitterOrderList() {
-            const container = document.getElementById('admin-litter-order-list');
+        function renderGainTable() {
+            let litter = getCurrentLitter();
+            let table = document.getElementById('gain-table');
+            let theadTr = table.querySelector('thead tr');
+            theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
+            litter.puppies.forEach(p => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-stone-700">` : "";
+                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            });
+
+            let tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            for (let i = 1; i < litter.weights.length; i++) {
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-stone-800/50";
+                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+
+                litter.puppies.forEach((p, pIdx) => {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
+                    tr.innerHTML += `<td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
+                });
+                tbody.appendChild(tr);
+            }
+        }
+
+        function renderFamilyTables(selectedVal) {
+            let litter = getCurrentLitter();
+            let pIndices = selectedVal === 'all' ? litter.puppies.map((_, idx) => idx) : [parseInt(selectedVal)];
+
+            let pTable = document.getElementById('family-percent-table');
+            pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => {
+                let p = litter.puppies[idx];
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-stone-700">` : "";
+                return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            }).join('');
+            let pTbody = pTable.querySelector('tbody');
+            pTbody.innerHTML = '';
+
+            for (let i = 1; i < litter.weights.length; i++) {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+                pIndices.forEach(pIdx => {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
+                    let colorClass = (pct !== null && pct < 3) ? "text-red-400 font-bold bg-red-950/40" : "text-stone-200";
+                    tr.innerHTML += `<td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
+                });
+                pTbody.appendChild(tr);
+            }
+
+            let gTable = document.getElementById('family-gain-table');
+            gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => {
+                let p = litter.puppies[idx];
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-stone-700">` : "";
+                return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            }).join('');
+            let gTbody = gTable.querySelector('tbody');
+            gTbody.innerHTML = '';
+
+            for (let i = 1; i < litter.weights.length; i++) {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+                pIndices.forEach(pIdx => {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
+                    tr.innerHTML += `<td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
+                });
+                gTbody.appendChild(tr);
+            }
+        }
+
+        function switchActiveLitter(id) {
+            currentLitterId = id;
+            initApp();
+        }
+
+        // --- GESTION DU RÉORDONNANCEMENT DES PORTÉES ---
+        function moveLitterUp(index) {
+            if (index <= 0) return;
+            let list = getLitters();
+            let temp = list[index];
+            list[index] = list[index - 1];
+            list[index - 1] = temp;
+            saveAllLitters();
+            renderAllLittersList();
+            updateAdminLitterSelect();
+        }
+
+        function moveLitterDown(index) {
+            let list = getLitters();
+            if (index >= list.length - 1) return;
+            let temp = list[index];
+            list[index] = list[index + 1];
+            list[index + 1] = temp;
+            saveAllLitters();
+            renderAllLittersList();
+            updateAdminLitterSelect();
+        }
+
+        function renderAllLittersList() {
+            let container = document.getElementById('all-litters-list');
+            container.innerHTML = '';
+            let list = getLitters();
+            
+            list.forEach((l, index) => {
+                let upDisabled = index === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-stone-800 cursor-pointer';
+                let downDisabled = index === list.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-stone-800 cursor-pointer';
+
+                container.innerHTML += `
+                    <div class="bg-stone-950 p-4 rounded-2xl border border-stone-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex flex-col gap-1">
+                                <button onclick="moveLitterUp(${index})" ${index === 0 ? 'disabled' : ''} class="w-7 h-7 bg-stone-900 text-stone-200 border border-stone-700 rounded-lg text-xs flex items-center justify-center transition ${upDisabled}" title="Monter">
+                                    <i class="fa-solid fa-arrow-up"></i>
+                                </button>
+                                <button onclick="moveLitterDown(${index})" ${index === list.length - 1 ? 'disabled' : ''} class="w-7 h-7 bg-stone-900 text-stone-200 border border-stone-700 rounded-lg text-xs flex items-center justify-center transition ${downDisabled}" title="Descendre">
+                                    <i class="fa-solid fa-arrow-down"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-stone-100">${l.name}</h4>
+                                <p class="text-xs text-stone-400">Né le ${l.birthDate ? l.birthDate.split('-').reverse().join('/') : '-'} • ${l.puppies.length} chiots</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button onclick="switchActiveLitter('${l.id}'); switchTab('saisie');" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold">Gérer</button>
+                            <button onclick="openEditLitterModal('${l.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold"><i class="fa-solid fa-pen"></i> Modifier</button>
+                            <button onclick="deleteLitter('${l.id}')" class="px-3 py-1.5 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 rounded-xl text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- GESTION MODIFICATION PORTÉE ---
+        function openEditLitterModal(id) {
+            let list = getLitters();
+            let litter = list.find(l => l.id === id);
+            if (!litter) return;
+
+            document.getElementById('edit-litter-id').value = litter.id;
+            document.getElementById('edit-litter-name').value = litter.name;
+            document.getElementById('edit-litter-date').value = litter.birthDate || '';
+
+            let container = document.getElementById('edit-puppies-container');
             container.innerHTML = '';
 
-            if (appData.litters.length === 0) {
-                container.innerHTML = `<p class="text-xs text-stone-400">Aucune portée à réorganiser.</p>`;
-                return;
-            }
-
-            appData.litters.forEach((l, index) => {
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between bg-stone-50 border border-stone-200 px-3.5 py-2 rounded-xl text-xs font-medium text-stone-800";
-                
-                div.innerHTML = `
-                    <span>${l.name} (${formatDateDisplay(l.birthDate)})</span>
-                    <div class="flex items-center space-x-1">
-                        <button onclick="moveLitter(${index}, -1)" ${index === 0 ? 'disabled class="opacity-30 cursor-not-allowed p-1 text-stone-500"' : 'class="p-1 text-stone-600 hover:bg-stone-200 rounded transition-colors"'} title="Monter">
-                            <i class="fa-solid fa-arrow-up"></i>
-                        </button>
-                        <button onclick="moveLitter(${index}, 1)" ${index === appData.litters.length - 1 ? 'disabled class="opacity-30 cursor-not-allowed p-1 text-stone-500"' : 'class="p-1 text-stone-600 hover:bg-stone-200 rounded transition-colors"'} title="Descendre">
-                            <i class="fa-solid fa-arrow-down"></i>
-                        </button>
+            litter.puppies.forEach((p, idx) => {
+                container.innerHTML += `
+                    <div class="flex items-center gap-2 bg-stone-950 p-2.5 rounded-xl border border-stone-800 edit-puppy-row">
+                        <input type="text" value="${p.name}" placeholder="Nom du chiot" class="edit-p-name flex-1 border border-stone-700 rounded-lg px-3 py-1.5 text-xs outline-none bg-stone-900 text-stone-100 font-semibold" data-photo="${p.photo || ''}" data-color="${p.color || defaultColors[idx % defaultColors.length]}">
+                        <select class="edit-p-sex border border-stone-700 rounded-lg px-2 py-1.5 text-xs outline-none bg-stone-900 text-stone-100">
+                            <option value="Mâle" ${p.sex === 'Mâle' ? 'selected' : ''}>Mâle</option>
+                            <option value="Femelle" ${p.sex === 'Femelle' ? 'selected' : ''}>Femelle</option>
+                        </select>
+                        <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-300 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `;
-                container.appendChild(div);
-            });
-        }
-
-        function moveLitter(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= appData.litters.length) return;
-
-            const temp = appData.litters[index];
-            appData.litters[index] = appData.litters[newIndex];
-            appData.litters[newIndex] = temp;
-
-            saveDataToLocalStorage();
-            renderAll();
-            renderAdminLitterOrderList();
-        }
-
-        // --- WEIGHING ACTIONS ---
-        function openAddWeighingModal() {
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            if (!activeLitter || activeLitter.puppies.length === 0) {
-                alert("Veuillez sélectionner une portée avec des chiots.");
-                return;
-            }
-
-            const listContainer = document.getElementById('weighing-inputs-list');
-            listContainer.innerHTML = '';
-
-            activeLitter.puppies.forEach(p => {
-                // Trouver le dernier poids enregistré pour suggestion
-                const sorted = getSortedWeighings(activeLitter, p);
-                const lastWeight = sorted.length > 0 ? sorted[sorted.length - 1].weight : '';
-
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between bg-stone-50 p-2.5 rounded-xl border border-stone-200";
-                div.innerHTML = `
-                    <span class="text-xs font-semibold text-stone-800">${p.name} (${p.sex})</span>
-                    <div class="flex items-center space-x-1.5">
-                        <input type="number" data-puppy-id="${p.id}" value="${lastWeight}" placeholder="Poids" class="weighing-input w-24 bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 text-right">
-                        <span class="text-xs text-stone-400 font-medium">g</span>
-                    </div>
-                `;
-                listContainer.appendChild(div);
             });
 
-            document.getElementById('modal-weighing').classList.remove('hidden');
+            document.getElementById('editLitterModal').classList.remove('hidden');
         }
 
-        function saveWeighing() {
-            const dateVal = document.getElementById('input-weighing-date').value;
-            if (!dateVal) {
-                alert("Veuillez sélectionner une date de pesée.");
-                return;
-            }
+        function closeEditLitterModal() {
+            document.getElementById('editLitterModal').classList.add('hidden');
+        }
 
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            if (!activeLitter) return;
+        function saveEditedLitter() {
+            let id = document.getElementById('edit-litter-id').value;
+            let newName = document.getElementById('edit-litter-name').value || "Portée";
+            let newDate = document.getElementById('edit-litter-date').value || new Date().toISOString().split('T')[0];
 
-            const inputs = document.querySelectorAll('.weighing-input');
-            let addedCount = 0;
+            let rowElements = document.querySelectorAll('.edit-puppy-row');
+            let newPuppies = [];
 
-            inputs.forEach(input => {
-                const puppyId = input.getAttribute('data-puppy-id');
-                const weightVal = parseInt(input.value);
-
-                if (!isNaN(weightVal) && weightVal > 0) {
-                    const puppy = activeLitter.puppies.find(p => p.id === puppyId);
-                    if (puppy) {
-                        // Vérifier si une pesée existe déjà à cette date pour ce chiot
-                        const existingIndex = puppy.weighings.findIndex(w => w.date === dateVal);
-                        if (existingIndex >= 0) {
-                            puppy.weighings[existingIndex].weight = weightVal;
-                        } else {
-                            puppy.weighings.push({ date: dateVal, weight: weightVal });
-                        }
-                        addedCount++;
-                    }
+            rowElements.forEach((row, idx) => {
+                let nameInput = row.querySelector('.edit-p-name');
+                let sexSelect = row.querySelector('.edit-p-sex');
+                if (nameInput && nameInput.value.trim() !== "") {
+                    newPuppies.push({
+                        name: nameInput.value.trim().toUpperCase(),
+                        sex: sexSelect.value,
+                        color: nameInput.getAttribute('data-color') || defaultColors[idx % defaultColors.length],
+                        photo: nameInput.getAttribute('data-photo') || ''
+                    });
                 }
             });
 
-            if (addedCount > 0) {
-                saveDataToLocalStorage();
-                closeModal('modal-weighing');
-                renderAll();
-            } else {
-                alert("Veuillez entrer au moins un poids valide.");
-            }
-        }
-
-        function deleteWeighing(dateStr) {
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            if (!activeLitter) return;
-            const activePuppy = activeLitter.puppies.find(p => p.id === currentPuppyId);
-            if (!activePuppy) return;
-
-            if (confirm(`Supprimer la pesée du ${formatDateDisplay(dateStr)} pour ${activePuppy.name} ?`)) {
-                activePuppy.weighings = activePuppy.weighings.filter(w => w.date !== dateStr);
-                saveDataToLocalStorage();
-                renderAll();
-            }
-        }
-
-        // --- EXCEL EXPORT & IMPORT ---
-        function exportLitterExcel() {
-            const activeLitter = appData.litters.find(l => l.id === currentLitterId);
-            if (!activeLitter || activeLitter.puppies.length === 0) return;
-
-            // Collecter toutes les dates uniques de pesées
-            const dateSet = new Set();
-            activeLitter.puppies.forEach(p => {
-                p.weighings.forEach(w => dateSet.add(w.date));
-            });
-            const dates = Array.from(dateSet).sort((a, b) => new Date(a) - new Date(b));
-
-            const rows = [];
-            dates.forEach(d => {
-                const row = { Date: formatDateDisplay(d) };
-                activeLitter.puppies.forEach(p => {
-                    const wObj = p.weighings.find(w => w.date === d);
-                    row[p.name] = wObj ? wObj.weight : '';
-                });
-                rows.push(row);
-            });
-
-            const worksheet = XLSX.utils.json_to_sheet(rows);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Portée");
-            XLSX.writeFile(workbook, `Suivi_Portee_${activeLitter.name.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
-        }
-
-        function handleExcelImport() {
-            const fileInput = document.getElementById('excel-file-input');
-            const file = fileInput.files[0];
-            if (!file) {
-                alert("Veuillez sélectionner un fichier Excel.");
+            if (newPuppies.length === 0) {
+                alert("Une portée doit contenir au moins un chiot.");
                 return;
             }
 
-            const reader = new FileReader();
+            let list = getLitters();
+            let litter = list.find(l => l.id === id);
+            if (litter) {
+                litter.name = newName;
+                litter.birthDate = newDate;
+
+                litter.weights.forEach(w => {
+                    let newValues = [];
+                    for (let i = 0; i < newPuppies.length; i++) {
+                        newValues.push(w.values[i] !== undefined ? w.values[i] : 250);
+                    }
+                    w.values = newValues;
+                });
+
+                litter.puppies = newPuppies;
+                saveAllLitters();
+                closeEditLitterModal();
+                initApp();
+                renderAllLittersList();
+                alert("Portée modifiée avec succès !");
+            }
+        }
+
+        // Fonction d'import Excel
+        function importOldLitterExcel(input) {
+            if (!input.files || !input.files[0]) return;
+            let file = input.files[0];
+            let reader = new FileReader();
+
             reader.onload = function(e) {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    let data = new Uint8Array(e.target.result);
+                    let workbook = XLSX.read(data, { type: 'array' });
+                    let firstSheetName = workbook.SheetNames[0];
+                    let worksheet = workbook.Sheets[firstSheetName];
+                    let jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-                    if (json.length < 2) {
+                    if (jsonRows.length < 2) {
                         alert("Le fichier Excel semble vide ou mal formaté.");
                         return;
                     }
 
-                    const headers = json[0];
-                    // La première colonne doit être la date
-                    const puppyNames = headers.slice(1).filter(h => h && h.toString().toLowerCase() !== 'date' && h.toString().toLowerCase() !== 'age');
+                    let headerRow = jsonRows[0];
+                    let puppies = [];
+                    for (let c = 1; c < headerRow.length; c++) {
+                        let puppyName = String(headerRow[c] || `Chiot ${c}`).trim();
+                        if (puppyName !== "") {
+                            puppies.push({
+                                name: puppyName.toUpperCase(),
+                                sex: "Femelle",
+                                color: defaultColors[(puppies.length) % defaultColors.length],
+                                photo: ""
+                            });
+                        }
+                    }
 
-                    if (puppyNames.length === 0) {
-                        alert("Aucun chiot détecté dans les en-têtes (colonne 2 et suivantes).");
+                    if (puppies.length === 0) {
+                        alert("Aucun nom de chiot trouvé dans l'en-tête du fichier.");
                         return;
                     }
 
-                    const puppies = puppyNames.map((name, idx) => ({
-                        id: 'p_imp_' + Date.now() + '_' + idx,
-                        name: name.toString().trim(),
-                        sex: 'M',
-                        photo: null,
-                        weighings: []
-                    }));
+                    let weights = [];
+                    let birthDate = new Date().toISOString().split('T')[0];
 
-                    const litterName = prompt("Nom de cette portée importée :", "Portée Importée");
-                    if (!litterName) return;
-
-                    const birthDate = new Date().toISOString().split('T')[0];
-
-                    // Parcourir les lignes de données
-                    for (let i = 1; i < json.length; i++) {
-                        const row = json[i];
+                    for (let r = 1; r < jsonRows.length; r++) {
+                        let row = jsonRows[r];
                         if (!row || row.length === 0) continue;
-
-                        let dateStr = row[0];
-                        if (!dateStr) continue;
-
-                        // Normaliser la date (si format Excel number ou string JJ/MM/AAAA)
-                        let parsedDate = parseExcelDate(dateStr);
-                        if (!parsedDate) continue;
-
-                        puppyNames.forEach((pName, pIdx) => {
-                            const colIndex = pIdx + 1;
-                            const weightVal = parseInt(row[colIndex]);
-                            if (!isNaN(weightVal) && weightVal > 0) {
-                                puppies[pIdx].weighings.push({
-                                    date: parsedDate,
-                                    weight: weightVal
-                                });
+                        
+                        let rawDate = row[0];
+                        let dateStr = "";
+                        
+                        if (typeof rawDate === 'number') {
+                            let dateObj = XLSX.SSF.parse_date_code(rawDate);
+                            if (dateObj) {
+                                dateStr = `${dateObj.y}-${String(dateObj.m).padStart(2,'0')}-${String(dateObj.d).padStart(2,'0')}`;
                             }
-                        });
+                        } else if (typeof rawDate === 'string') {
+                            dateStr = rawDate.trim();
+                            if (dateStr.includes('/')) {
+                                let parts = dateStr.split('/');
+                                if (parts.length === 3) {
+                                    dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                }
+                            }
+                        }
+
+                        if (!dateStr || isNaN(new Date(dateStr).getTime())) continue;
+
+                        if (weights.length === 0) {
+                            birthDate = dateStr;
+                        }
+
+                        let values = [];
+                        for (let c = 0; c < puppies.length; c++) {
+                            let val = parseFloat(row[c + 1]);
+                            values.push(isNaN(val) ? 0 : val);
+                        }
+                        weights.push({ date: dateStr, values: values });
                     }
 
-                    const newLitter = {
-                        id: 'litter_' + Date.now(),
+                    if (weights.length === 0) {
+                        alert("Aucune ligne de pesée valide trouvée dans le fichier.");
+                        return;
+                    }
+
+                    let litterName = file.name.replace(/\.[^/.]+$/, "").replace(/[_]/g, " ");
+
+                    let importedLitter = {
+                        id: "litter-" + Date.now() + "-" + Math.floor(Math.random()*1000),
                         name: litterName,
                         birthDate: birthDate,
-                        puppies: puppies
+                        puppies: puppies,
+                        weights: weights
                     };
 
-                    appData.litters.unshift(newLitter);
-                    currentLitterId = newLitter.id;
-                    currentPuppyId = newLitter.puppies[0].id;
-                    saveDataToLocalStorage();
-                    renderAll();
-                    switchTab('dashboard');
-                    alert("Portée importée avec succès !");
-                    fileInput.value = '';
-
+                    appData.litters.push(importedLitter);
+                    currentLitterId = importedLitter.id;
+                    saveAllLitters();
+                    initApp();
+                    switchTab('saisie');
+                    alert(`Portée "${litterName}" importée avec succès (${puppies.length} chiots, ${weights.length} dates de pesées) !`);
                 } catch (err) {
-                    console.error("Erreur import Excel", err);
-                    alert("Erreur lors de la lecture du fichier Excel.");
+                    console.error(err);
+                    alert("Erreur lors de la lecture du fichier Excel : " + err.message);
                 }
+                input.value = "";
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function parseExcelDate(val) {
-            if (!val) return null;
-            if (typeof val === 'number') {
-                // Nombre de jours Excel
-                const d = XLSX.SSF.parse_date_code(val);
-                if (d) {
-                    const y = d.y;
-                    const m = String(d.m).padStart(2, '0');
-                    const day = String(d.d).padStart(2, '0');
-                    return `${y}-${m}-${day}`;
-                }
-            }
-            let str = val.toString().trim();
-            // Format JJ/MM/AAAA ou JJ-MM-AAAA
-            if (str.includes('/')) {
-                const parts = str.split('/');
-                if (parts.length === 3) {
-                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                }
-            }
-            if (str.includes('-') && str.split('-')[0].length === 2) {
-                const parts = str.split('-');
-                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            }
-            return str; // Si déjà AAAA-MM-JJ
+        function openNewLitterModal() {
+            document.getElementById('newLitterModal').classList.remove('hidden');
+            renderPuppyNameInputs();
         }
 
-        function resetAllData() {
-            if (confirm("ATTENTION : Voulez-vous vraiment effacer toutes les données de l'application ?")) {
-                appData = { litters: [], headerLogo: null };
-                saveDataToLocalStorage();
-                currentLitterId = null;
-                currentPuppyId = null;
-                renderAll();
-                switchTab('dashboard');
+        function closeNewLitterModal() {
+            document.getElementById('newLitterModal').classList.add('hidden');
+        }
+
+        function renderPuppyNameInputs() {
+            let count = parseInt(document.getElementById('modal-puppy-count').value) || 4;
+            let container = document.getElementById('modal-puppy-names-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                container.innerHTML += `
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-stone-950 p-2.5 rounded-xl border border-stone-800">
+                        <span class="text-xs font-bold text-stone-300 w-16">Chiot #${i}</span>
+                        <input type="text" id="puppy-name-${i}" placeholder="Nom" value="Chiot ${i}" class="flex-1 border border-stone-700 rounded-lg px-3 py-1.5 text-xs outline-none bg-stone-900 text-stone-100">
+                        <select id="puppy-sex-${i}" class="border border-stone-700 rounded-lg px-2 py-1.5 text-xs outline-none bg-stone-900 text-stone-100">
+                            <option value="Mâle">Mâle</option>
+                            <option value="Femelle" selected>Femelle</option>
+                        </select>
+                        <div class="flex items-center gap-1.5 w-full sm:w-auto">
+                            <label class="text-[11px] text-stone-400 font-medium whitespace-nowrap"><i class="fa-solid fa-camera mr-1"></i>Photo :</label>
+                            <input type="file" id="puppy-photo-${i}" accept="image/*" class="text-xs text-stone-300 w-full sm:w-44 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-stone-800 file:text-stone-200 hover:file:bg-stone-700 cursor-pointer">
+                        </div>
+                    </div>
+                `;
             }
         }
 
-        // --- SUPABASE CLOUD SYNC CONFIG ---
-        function loadSupabaseConfig() {
-            const raw = localStorage.getItem('fief_supabase_config');
-            if (raw) {
-                try {
-                    supabaseConfig = JSON.parse(raw);
-                    document.getElementById('input-supabase-url').value = supabaseConfig.url || '';
-                    document.getElementById('input-supabase-key').value = supabaseConfig.key || '';
-                    if (supabaseConfig.url && supabaseConfig.key) {
-                        initSupabaseClient();
+        function generateNewLitter() {
+            let name = document.getElementById('modal-litter-name').value || "Nouvelle portée";
+            let date = document.getElementById('modal-litter-date').value || new Date().toISOString().split('T')[0];
+            let count = parseInt(document.getElementById('modal-puppy-count').value) || 4;
+
+            let puppies = [];
+            let processed = 0;
+
+            for (let i = 1; i <= count; i++) {
+                let pName = document.getElementById(`puppy-name-${i}`).value || `Chiot ${i}`;
+                let pSex = document.getElementById(`puppy-sex-${i}`).value;
+                let fileInput = document.getElementById(`puppy-photo-${i}`);
+
+                let puppyObj = {
+                    name: pName.toUpperCase(),
+                    sex: pSex,
+                    color: defaultColors[(i - 1) % defaultColors.length],
+                    photo: ""
+                };
+                puppies.push(puppyObj);
+
+                if (fileInput.files && fileInput.files[0]) {
+                    let reader = new FileReader();
+                    let currentIndex = i - 1;
+                    reader.onload = function(e) {
+                        puppies[currentIndex].photo = e.target.result;
+                        processed++;
+                        if (processed === count) finalizeNewLitter(name, date, puppies);
+                    };
+                    reader.readAsDataURL(fileInput.files[0]);
+                } else {
+                    processed++;
+                }
+            }
+
+            if (processed === count) {
+                finalizeNewLitter(name, date, puppies);
+            }
+        }
+
+        function finalizeNewLitter(name, date, puppies) {
+            let newLitter = {
+                id: "litter-" + Date.now(),
+                name: name,
+                birthDate: date,
+                puppies: puppies,
+                weights: [{ date: date, values: puppies.map(() => 250) }]
+            };
+
+            let list = getLitters();
+            list.push(newLitter);
+            currentLitterId = newLitter.id;
+            saveAllLitters();
+            closeNewLitterModal();
+            initApp();
+        }
+
+        function deleteLitter(id) {
+            let list = getLitters();
+            if (list.length <= 1) {
+                alert("Vous ne pouvez pas supprimer la dernière portée active.");
+                return;
+            }
+            if (confirm("Êtes-vous sûr de vouloir supprimer cette portée ?")) {
+                appData.litters = list.filter(l => l.id !== id);
+                currentLitterId = appData.litters[0].id;
+                saveAllLitters();
+                initApp();
+            }
+        }
+
+        function exportToExcel() {
+            let litter = getCurrentLitter();
+            let data = [];
+            let header = ["Date"];
+            litter.puppies.forEach(p => header.push(p.name));
+            data.push(header);
+
+            litter.weights.forEach(w => {
+                let row = [w.date];
+                litter.puppies.forEach((_, pIdx) => row.push(w.values[pIdx] || ""));
+                data.push(row);
+            });
+
+            let ws = XLSX.utils.aoa_to_sheet(data);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Suivi Poids");
+            XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_poids.xlsx`);
+        }
+
+        // Fonction pour copier tout le code source dans le presse-papier
+        function copySourceCode() {
+            const htmlContent = document.documentElement.outerHTML;
+            navigator.clipboard.writeText(htmlContent).then(() => {
+                alert("Code source complet copié dans le presse-papier ! Vous pouvez le coller dans votre fichier HTML.");
+            }).catch(err => {
+                alert("Erreur lors de la copie : " + err);
+            });
+        }
+
+        setInterval(async () => {
+            try {
+                const { data } = await supabaseClient.from('portees').select('*').eq('id', 'main_data').single();
+                if (data && data.content) {
+                    let remoteString = JSON.stringify(data.content);
+                    let localString = JSON.stringify(appData);
+                    if (remoteString !== localString) {
+                        if (Array.isArray(data.content)) {
+                            appData.litters = data.content;
+                        } else if (data.content.litters) {
+                            appData = data.content;
+                        }
+                        let list = getLitters();
+                        if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
+                            currentLitterId = list[0].id;
+                        }
+                        localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
+                        
+                        renderHeaderLogo();
+                        if (document.getElementById('family-view-container').classList.contains('hidden')) {
+                            initApp();
+                        } else {
+                            updateFamilyLitterSelect();
+                        }
                     }
-                } catch (e) {}
-            }
-        }
-
-        function openSupabaseConfigModal() {
-            document.getElementById('modal-supabase').classList.remove('hidden');
-        }
-
-        function saveSupabaseConfig() {
-            const url = document.getElementById('input-supabase-url').value.trim();
-            const key = document.getElementById('input-supabase-key').value.trim();
-            supabaseConfig = { url, key };
-            localStorage.setItem('fief_supabase_config', JSON.stringify(supabaseConfig));
-            closeModal('modal-supabase');
-            initSupabaseClient();
-        }
-
-        function initSupabaseClient() {
-            if (!supabaseConfig.url || !supabaseConfig.key) return;
-            try {
-                supabaseClient = window.supabase.createClient(supabaseConfig.url, supabaseConfig.key);
-                document.getElementById('sync-status').className = "mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-between shadow-sm";
-                document.getElementById('sync-status-text').textContent = "Synchronisation Supabase active.";
-                fetchFromSupabase();
-            } catch (e) {
-                console.error("Erreur init Supabase", e);
-            }
-        }
-
-        async function syncToSupabase() {
-            if (!supabaseClient) return;
-            try {
-                // Table unique 'app_data' avec une ligne id = 1
-                await supabaseClient.from('app_data').upsert({ id: 1, payload: appData, updated_at: new Date() });
-            } catch (e) {
-                console.error("Erreur sync to supabase", e);
-            }
-        }
-
-        async function fetchFromSupabase() {
-            if (!supabaseClient) return;
-            try {
-                const { data, error } = await supabaseClient.from('app_data').select('payload').eq('id', 1).single();
-                if (data && data.payload) {
-                    appData = data.payload;
-                    saveDataToLocalStorage();
-                    if (appData.litters.length > 0 && !currentLitterId) {
-                        currentLitterId = appData.litters[0].id;
-                        currentPuppyId = appData.litters[0].puppies.length > 0 ? appData.litters[0].puppies[0].id : null;
-                    }
-                    updateHeaderLogoDisplay();
-                    renderAll();
                 }
-            } catch (e) {
-                console.error("Erreur fetch from supabase", e);
+            } catch (e) {}
+        }, 5000);
+
+        window.addEventListener('pageshow', async function(event) {
+            if (event.persisted) {
+                window.location.reload();
             }
-        }
+        });
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadDataFromSupabase();
+            if (window.location.hash === '#famille') {
+                openFamilyPortal();
+            } else {
+                initApp();
+            }
+        });
     </script>
 </body>
 </html>
