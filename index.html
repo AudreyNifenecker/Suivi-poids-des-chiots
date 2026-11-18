@@ -547,10 +547,11 @@
                         if (!l.weights) l.weights = [];
                         if (!l.puppies) l.puppies = [];
                         l.weights.forEach(w => {
-                            if (!w.notes && w.note) {
-                                w.notes = l.puppies.map(() => w.note);
-                            } else if (!w.notes) {
+                            if (!w.notes || !Array.isArray(w.notes)) {
                                 w.notes = l.puppies.map(() => "");
+                            }
+                            while (w.notes.length < l.puppies.length) {
+                                w.notes.push("");
                             }
                         });
                     });
@@ -573,6 +574,12 @@
                         }
                         appData.litters.forEach(l => {
                             if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
+                            if (!l.weights) l.weights = [];
+                            l.weights.forEach(w => {
+                                if (!w.notes || !Array.isArray(w.notes)) {
+                                    w.notes = l.puppies.map(() => "");
+                                }
+                            });
                         });
                     } catch (e) {}
                 }
@@ -868,7 +875,6 @@
             let globalDoubleBanner = document.getElementById('family-global-double-banner');
 
             if (selectedVal === "all") {
-                // VUE GLOBALE DE TOUTE LA PORTÉE
                 individualCard.classList.add('hidden');
                 globalDoubleBanner.classList.remove('hidden');
                 updateFamilyGlobalDoubleSummary();
@@ -885,7 +891,6 @@
                     });
                 });
             } else {
-                // VUE INDIVIDUELLE D'UN CHIOT
                 individualCard.classList.remove('hidden');
                 globalDoubleBanner.classList.add('hidden');
 
@@ -913,7 +918,6 @@
                 let doubleDateStr = calculateDoubleWeight(litter, pIdx);
                 document.getElementById('fam-double-weight').innerHTML = `<div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppy.color};">${puppy.name}</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>`;
 
-                // NOTES DU CHIOT SÉLECTIONNÉ
                 let notesContainer = document.getElementById('family-notes-list');
                 notesContainer.innerHTML = '';
                 let hasNotes = false;
@@ -934,7 +938,6 @@
                     notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
                 }
 
-                // COURBE COMPARATIVE AVEC MISE EN ÉVIDENCE DU CHIOT SÉLECTIONNÉ
                 litter.puppies.forEach((p, idx) => {
                     let data = litter.weights.map(w => w.values[idx] || null);
                     datasets.push({
@@ -962,7 +965,6 @@
             renderFamilyCompleteTables();
         }
 
-        // --- TABLEAUX COMPARATIFS DE TOUTE LA PORTÉE DANS L'ESPACE FAMILLE ---
         function renderFamilyCompleteTables() {
             let litter = getCurrentLitter();
 
@@ -1010,7 +1012,6 @@
             }
         }
 
-        // --- FICHE IMPRIMABLE CHIOT ---
         function openPrintableFiche() {
             let litter = getCurrentLitter();
             let selectedVal = document.getElementById('family-puppy-select').value;
@@ -1114,6 +1115,13 @@
             tbody.innerHTML = '';
 
             litter.weights.forEach((wRow, wIdx) => {
+                if (!wRow.notes || !Array.isArray(wRow.notes)) {
+                    wRow.notes = litter.puppies.map(() => "");
+                }
+                while (wRow.notes.length < litter.puppies.length) {
+                    wRow.notes.push("");
+                }
+
                 let tr = document.createElement('tr');
                 tr.className = "hover:bg-rose-50/50 transition";
 
@@ -1125,12 +1133,12 @@
                 litter.puppies.forEach((p, pIdx) => {
                     let tdVal = document.createElement('td');
                     tdVal.className = "p-3";
-                    let currentVal = wRow.values[pIdx] !== undefined ? wRow.values[pIdx] : '';
+                    let currentVal = wRow.values && wRow.values[pIdx] !== undefined ? wRow.values[pIdx] : '';
                     let currentNote = wRow.notes && wRow.notes[pIdx] !== undefined ? wRow.notes[pIdx] : '';
                     tdVal.innerHTML = `
                         <div class="flex flex-col gap-1.5">
-                            <input type="number" value="${currentVal}" placeholder="Poids g" onchange="updateWeightVal(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
-                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" onchange="updatePuppyNote(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
+                            <input type="number" value="${currentVal}" placeholder="Poids g" oninput="updateWeightValLive(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
+                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" oninput="updatePuppyNoteLive(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
                         </div>
                     `;
                     tr.appendChild(tdVal);
@@ -1178,20 +1186,22 @@
             updateWeightAlertBanner();
         }
 
-        function updateWeightVal(wIdx, pIdx, val) {
+        function updateWeightValLive(wIdx, pIdx, val) {
             let litter = getCurrentLitter();
+            if (!litter.weights[wIdx].values) litter.weights[wIdx].values = [];
             litter.weights[wIdx].values[pIdx] = val === '' ? 0 : parseFloat(val);
             saveAllLitters();
             updateAdminChartDoubleSummary();
             updateWeightAlertBanner();
-            renderPercentTable();
-            renderGainTable();
         }
 
-        function updatePuppyNote(wIdx, pIdx, val) {
+        function updatePuppyNoteLive(wIdx, pIdx, val) {
             let litter = getCurrentLitter();
-            if (!litter.weights[wIdx].notes) {
+            if (!litter.weights[wIdx].notes || !Array.isArray(litter.weights[wIdx].notes)) {
                 litter.weights[wIdx].notes = litter.puppies.map(() => "");
+            }
+            while (litter.weights[wIdx].notes.length < litter.puppies.length) {
+                litter.weights[wIdx].notes.push("");
             }
             litter.weights[wIdx].notes[pIdx] = val;
             saveAllLitters();
