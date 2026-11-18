@@ -19,7 +19,7 @@
     </style>
     <script>
         const SUPABASE_URL = 'https://gqydchjaqokbdegrhris.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeWRjaGphcW9rYmRlZ3JocmlzIxincm9sZSI6ImFub24iLCJpYXQiOjE3MjkzMjk0NDEsImV4cCI6MjA0NDkwOTQ0MX0';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeWRjaGphcW9rYmRlZ3JocmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkzMjk0NDEsImV4cCI6MjA0NDkwOTQ0MX0';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     </script>
 </head>
@@ -72,7 +72,6 @@
 
         <!-- TAB 1: SAISIE & POIDS -->
         <div id="tab-saisie" class="tab-content active space-y-6">
-            <!-- Sélecteur rapide de portée -->
             <div class="bg-white rounded-2xl shadow p-4 border border-rose-100 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div class="w-full md:w-1/2">
                     <label class="block text-xs font-bold text-rose-900 mb-1"><i class="fa-solid fa-filter mr-1 text-rose-500"></i> Choisir la portée active :</label>
@@ -1032,7 +1031,7 @@
             XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_poids.xlsx`);
         }
 
-        // AUTO-ACTUALISATION INTELLIGENTE : Vérifie le cloud toutes les 10 secondes en arrière-plan
+        // AUTO-ACTUALISATION INTELLIGENTE (Toutes les 10 secondes)
         setInterval(async () => {
             try {
                 const { data } = await supabaseClient.from('elevage_data').select('*').eq('id', 'main_data').single();
@@ -1049,13 +1048,14 @@
                         }
                     }
                 }
-            } catch (e) {
-                // Silencieux si pas de réseau
-            }
+            } catch (e) {}
         }, 10000);
 
         window.addEventListener('DOMContentLoaded', async () => {
             await loadDataFromSupabase();
+            
+            // Si le lien contient #famille OU si on veut que l'espace famille s'ouvre d'office sur le mobile, 
+            // cette ligne détecte l'ancre ou force la vue famille si l'écran est un mobile :
             if (window.location.hash === '#famille') {
                 openFamilyPortal();
             } else {
