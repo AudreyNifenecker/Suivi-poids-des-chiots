@@ -178,7 +178,7 @@
                     <h2 class="text-xl font-bold text-rose-950 flex items-center gap-2">
                         <i class="fa-solid fa-box-archive text-rose-500"></i> Gestion de toutes vos portées
                     </h2>
-                    <p class="text-xs text-rose-700 mt-1">Basculez, supprimez ou importez vos anciens fichiers Excel de portées.</p>
+                    <p class="text-xs text-rose-700 mt-1">Basculez, modifiez, supprimez ou importez vos portées.</p>
                 </div>
                 <div>
                     <button onclick="document.getElementById('import-excel-input').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-2">
@@ -318,6 +318,37 @@
             <div class="flex justify-end gap-3 pt-4 border-t border-rose-100">
                 <button onclick="closeNewLitterModal()" class="px-4 py-2 rounded-xl text-rose-700 hover:bg-rose-50 font-semibold text-sm">Annuler</button>
                 <button onclick="generateNewLitter()" class="px-6 py-2 bg-rose-400 hover:bg-rose-500 text-white font-semibold rounded-xl text-sm shadow">Créer la portée</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: MODIFIER LA PORTEE -->
+    <div id="editLitterModal" class="fixed inset-0 bg-rose-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-6 border border-rose-200 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-rose-100 pb-4">
+                <h3 class="text-xl font-bold text-rose-950 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-rose-500"></i> Modifier la portée et ses chiots
+                </h3>
+                <button onclick="closeEditLitterModal()" class="text-rose-400 hover:text-rose-600 text-xl font-bold">&times;</button>
+            </div>
+            <input type="hidden" id="edit-litter-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-rose-900 mb-1">Nom de la portée :</label>
+                    <input type="text" id="edit-litter-name" class="w-full border border-rose-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-rose-900 mb-1">Date de naissance :</label>
+                    <input type="date" id="edit-litter-date" class="w-full border border-rose-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-rose-900 mb-2">Composition des chiots :</label>
+                    <div id="edit-puppies-container" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t border-rose-100">
+                <button onclick="closeEditLitterModal()" class="px-4 py-2 rounded-xl text-rose-700 hover:bg-rose-50 font-semibold text-sm">Annuler</button>
+                <button onclick="saveEditedLitter()" class="px-6 py-2 bg-rose-400 hover:bg-rose-500 text-white font-semibold rounded-xl text-sm shadow">Enregistrer les modifications</button>
             </div>
         </div>
     </div>
@@ -966,18 +997,103 @@
             let list = getLitters();
             list.forEach(l => {
                 container.innerHTML += `
-                    <div class="bg-rose-50/50 p-4 rounded-2xl border border-rose-200 flex justify-between items-center">
+                    <div class="bg-rose-50/50 p-4 rounded-2xl border border-rose-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h4 class="font-bold text-rose-950">${l.name}</h4>
                             <p class="text-xs text-rose-700">Né le ${l.birthDate ? l.birthDate.split('-').reverse().join('/') : '-'} • ${l.puppies.length} chiots</p>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="switchActiveLitter('${l.id}'); switchTab('saisie');" class="px-3 py-1.5 bg-rose-400 text-white rounded-xl text-xs font-semibold">Gérer</button>
-                            <button onclick="deleteLitter('${l.id}')" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button onclick="switchActiveLitter('${l.id}'); switchTab('saisie');" class="px-3 py-1.5 bg-rose-400 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold">Gérer</button>
+                            <button onclick="openEditLitterModal('${l.id}')" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold"><i class="fa-solid fa-pen"></i> Modifier</button>
+                            <button onclick="deleteLitter('${l.id}')" class="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 `;
             });
+        }
+
+        // --- GESTION MODIFICATION PORTÉE ---
+        function openEditLitterModal(id) {
+            let list = getLitters();
+            let litter = list.find(l => l.id === id);
+            if (!litter) return;
+
+            document.getElementById('edit-litter-id').value = litter.id;
+            document.getElementById('edit-litter-name').value = litter.name;
+            document.getElementById('edit-litter-date').value = litter.birthDate || '';
+
+            let container = document.getElementById('edit-puppies-container');
+            container.innerHTML = '';
+
+            litter.puppies.forEach((p, idx) => {
+                container.innerHTML += `
+                    <div class="flex items-center gap-2 bg-rose-50/40 p-2.5 rounded-xl border border-rose-100 edit-puppy-row">
+                        <input type="text" value="${p.name}" placeholder="Nom du chiot" class="edit-p-name flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white font-semibold" data-photo="${p.photo || ''}" data-color="${p.color || defaultColors[idx % defaultColors.length]}">
+                        <select class="edit-p-sex border border-rose-200 rounded-lg px-2 py-1.5 text-xs outline-none bg-white">
+                            <option value="Mâle" ${p.sex === 'Mâle' ? 'selected' : ''}>Mâle</option>
+                            <option value="Femelle" ${p.sex === 'Femelle' ? 'selected' : ''}>Femelle</option>
+                        </select>
+                        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            });
+
+            document.getElementById('editLitterModal').classList.remove('hidden');
+        }
+
+        function closeEditLitterModal() {
+            document.getElementById('editLitterModal').classList.add('hidden');
+        }
+
+        function saveEditedLitter() {
+            let id = document.getElementById('edit-litter-id').value;
+            let newName = document.getElementById('edit-litter-name').value || "Portée";
+            let newDate = document.getElementById('edit-litter-date').value || new Date().toISOString().split('T')[0];
+
+            let rowElements = document.querySelectorAll('.edit-puppy-row');
+            let newPuppies = [];
+
+            rowElements.forEach((row, idx) => {
+                let nameInput = row.querySelector('.edit-p-name');
+                let sexSelect = row.querySelector('.edit-p-sex');
+                if (nameInput && nameInput.value.trim() !== "") {
+                    newPuppies.push({
+                        name: nameInput.value.trim().toUpperCase(),
+                        sex: sexSelect.value,
+                        color: nameInput.getAttribute('data-color') || defaultColors[idx % defaultColors.length],
+                        photo: nameInput.getAttribute('data-photo') || ''
+                    });
+                }
+            });
+
+            if (newPuppies.length === 0) {
+                alert("Une portée doit contenir au moins un chiot.");
+                return;
+            }
+
+            let list = getLitters();
+            let litter = list.find(l => l.id === id);
+            if (litter) {
+                litter.name = newName;
+                litter.birthDate = newDate;
+
+                // Ajuster le tableau des poids pour correspondre au nouveau nombre de chiots
+                litter.weights.forEach(w => {
+                    let newValues = [];
+                    for (let i = 0; i < newPuppies.length; i++) {
+                        // On essaie de conserver l'ancien poids si l'index existe, sinon 250g
+                        newValues.push(w.values[i] !== undefined ? w.values[i] : 250);
+                    }
+                    w.values = newValues;
+                });
+
+                litter.puppies = newPuppies;
+                saveAllLitters();
+                closeEditLitterModal();
+                initApp();
+                renderAllLittersList();
+                alert("Portée modifiée avec succès !");
+            }
         }
 
         // Fonction magique d'import d'un fichier Excel de portée existante
@@ -999,10 +1115,8 @@
                         return;
                     }
 
-                    // On extrait la ligne d'en-tête (les noms des chiots)
                     let headerRow = jsonRows[0];
                     let puppies = [];
-                    // La 1ère colonne est "Date", les suivantes sont les chiots
                     for (let c = 1; c < headerRow.length; c++) {
                         let puppyName = String(headerRow[c] || `Chiot ${c}`).trim();
                         if (puppyName !== "") {
@@ -1023,7 +1137,6 @@
                     let weights = [];
                     let birthDate = new Date().toISOString().split('T')[0];
 
-                    // On lit les lignes de pesées
                     for (let r = 1; r < jsonRows.length; r++) {
                         let row = jsonRows[r];
                         if (!row || row.length === 0) continue;
@@ -1032,14 +1145,12 @@
                         let dateStr = "";
                         
                         if (typeof rawDate === 'number') {
-                            // Conversion date Excel si numérique
                             let dateObj = XLSX.SSF.parse_date_code(rawDate);
                             if (dateObj) {
                                 dateStr = `${dateObj.y}-${String(dateObj.m).padStart(2,'0')}-${String(dateObj.d).padStart(2,'0')}`;
                             }
                         } else if (typeof rawDate === 'string') {
                             dateStr = rawDate.trim();
-                            // Si format JJ/MM/AAAA
                             if (dateStr.includes('/')) {
                                 let parts = dateStr.split('/');
                                 if (parts.length === 3) {
@@ -1051,7 +1162,7 @@
                         if (!dateStr || isNaN(new Date(dateStr).getTime())) continue;
 
                         if (weights.length === 0) {
-                            birthDate = dateStr; // La 1ère date est considérée comme la date de naissance
+                            birthDate = dateStr;
                         }
 
                         let values = [];
