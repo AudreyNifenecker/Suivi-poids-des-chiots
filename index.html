@@ -28,9 +28,12 @@
         <!-- Header -->
         <header class="bg-rose-100 text-rose-950 border border-rose-200 rounded-2xl p-6 shadow-xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
+                <div id="header-logo-container" onclick="triggerHeaderPhotoChange()" class="cursor-pointer group relative" title="Cliquer pour changer le logo/photo de l'élevage">
+                    <!-- Rendu dynamique du logo -->
+                </div>
                 <div>
                     <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
-                        <i class="fa-solid fa-dog text-rose-600"></i> Suivi Portées - Nurserie
+                        Suivi Portées - Nurserie
                     </h1>
                     <p class="text-rose-800 text-sm mt-1">Le Fief des Petits Crunchis</p>
                 </div>
@@ -309,31 +312,45 @@
         </div>
     </div>
 
+    <!-- Inputs fichiers cachés -->
     <input type="file" id="quick-photo-input" accept="image/*" class="hidden" onchange="handleQuickPhotoUpload(this)">
+    <input type="file" id="header-photo-input" accept="image/*" class="hidden" onchange="handleHeaderPhotoUpload(this)">
 
     <script>
-        let litters = [
-            {
-                id: "litter-1",
-                name: "Portée Utopia 2026",
-                birthDate: "2026-04-23",
-                puppies: [
-                    { name: "BAIKA", sex: "Femelle", color: "#e11d48", photo: "" },
-                    { name: "BLACK JACK", sex: "Mâle", color: "#2563eb", photo: "" },
-                    { name: "BANKAI", sex: "Mâle", color: "#059669", photo: "" },
-                    { name: "BLISS", sex: "Femelle", color: "#d97706", photo: "" }
-                ],
-                weights: [
-                    { date: "2026-04-23", values: [287, 265, 276, 298] },
-                    { date: "2026-06-10", values: [2180, 2050, 2078, 2180] }
-                ]
-            }
-        ];
+        let appData = {
+            headerPhoto: "",
+            litters: [
+                {
+                    id: "litter-1",
+                    name: "Portée Utopia 2026",
+                    birthDate: "2026-04-23",
+                    puppies: [
+                        { name: "BAIKA", sex: "Femelle", color: "#e11d48", photo: "" },
+                        { name: "BLACK JACK", sex: "Mâle", color: "#2563eb", photo: "" },
+                        { name: "BANKAI", sex: "Mâle", color: "#059669", photo: "" },
+                        { name: "BLISS", sex: "Femelle", color: "#d97706", photo: "" }
+                    ],
+                    weights: [
+                        { date: "2026-04-23", values: [287, 265, 276, 298] },
+                        { date: "2026-06-10", values: [2180, 2050, 2078, 2180] }
+                    ]
+                }
+            ]
+        };
 
-        let currentLitterId = litters[0].id;
+        let currentLitterId = appData.litters[0].id;
         let activePuppyIndexForPhoto = null;
 
-        // Synchronisation Cloud Supabase robuste connectée à la table "portees"
+        function getLitters() {
+            return appData.litters || appData; // Rétrocompatibilité
+        }
+
+        function getCurrentLitter() {
+            let list = getLitters();
+            return list.find(l => l.id === currentLitterId) || list[0];
+        }
+
+        // Synchronisation Cloud Supabase robuste
         async function loadDataFromSupabase() {
             try {
                 const { data, error } = await supabaseClient
@@ -342,25 +359,37 @@
                     .eq('id', 'main_data')
                     .single();
                 
-                if (data && data.content && Array.isArray(data.content) && data.content.length > 0) {
-                    litters = data.content;
-                    if (!litters.find(l => l.id === currentLitterId) && litters.length > 0) {
-                        currentLitterId = litters[0].id;
+                if (data && data.content) {
+                    if (Array.isArray(data.content)) {
+                        appData.litters = data.content;
+                    } else if (data.content.litters) {
+                        appData = data.content;
                     }
-                    localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
+                    let list = getLitters();
+                    if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
+                        currentLitterId = list[0].id;
+                    }
+                    localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
                 }
             } catch (err) {
-                let local = localStorage.getItem('crunchis_all_litters');
-                if (local) litters = JSON.parse(local);
+                let local = localStorage.getItem('crunchis_all_data') || localStorage.getItem('crunchis_all_litters');
+                if (local) {
+                    let parsed = JSON.parse(local);
+                    if (Array.isArray(parsed)) {
+                        appData.litters = parsed;
+                    } else {
+                        appData = parsed;
+                    }
+                }
             }
+            renderHeaderLogo();
         }
 
         async function saveDataToSupabase() {
             try {
-                // Utilisation d'un update ciblé sur 'main_data' pour garantir l'écriture
                 const { error } = await supabaseClient
                     .from('portees')
-                    .update({ content: litters })
+                    .update({ content: appData })
                     .eq('id', 'main_data');
                 
                 if (error) {
@@ -371,12 +400,8 @@
             }
         }
 
-        function getCurrentLitter() {
-            return litters.find(l => l.id === currentLitterId) || litters[0];
-        }
-
         function saveAllLitters() {
-            localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
+            localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
             saveDataToSupabase();
         }
 
@@ -386,6 +411,33 @@
         let percentBarChartInstance = null;
 
         const defaultColors = ['#e11d48', '#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0284c7', '#65a30d', '#ea580c', '#4f46e5'];
+
+        function renderHeaderLogo() {
+            let container = document.getElementById('header-logo-container');
+            if (!container) return;
+            if (appData.headerPhoto) {
+                container.innerHTML = `<img src="${appData.headerPhoto}" class="w-14 h-14 rounded-full object-cover border-2 border-rose-300 shadow-md">`;
+            } else {
+                container.innerHTML = `<div class="w-14 h-14 rounded-full bg-rose-200/70 flex items-center justify-center text-rose-600 border border-rose-300 shadow-sm"><i class="fa-solid fa-dog text-2xl"></i></div>`;
+            }
+        }
+
+        function triggerHeaderPhotoChange() {
+            document.getElementById('header-photo-input').value = "";
+            document.getElementById('header-photo-input').click();
+        }
+
+        function handleHeaderPhotoUpload(input) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    appData.headerPhoto = e.target.result;
+                    saveAllLitters();
+                    renderHeaderLogo();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -410,10 +462,12 @@
 
         function initApp() {
             let litter = getCurrentLitter();
+            if (!litter) return;
             document.getElementById('litter-main-title').innerHTML = `<i class="fa-solid fa-calendar-plus text-rose-500"></i> ${litter.name} - Pesées journalières`;
             let formattedDate = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
             document.getElementById('litter-info-details').innerText = `Date de naissance : ${formattedDate} | Chiots : ${litter.puppies.length}`;
             
+            renderHeaderLogo();
             updateAdminLitterSelect();
             renderWeightsTable();
             renderPercentTable();
@@ -426,7 +480,8 @@
             const select = document.getElementById('admin-litter-select');
             if (!select) return;
             select.innerHTML = '';
-            litters.forEach(l => {
+            let list = getLitters();
+            list.forEach(l => {
                 select.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>🐾 ${l.name} (${l.puppies.length} chiots)</option>`;
             });
         }
@@ -457,7 +512,8 @@
         function updateFamilyLitterSelect() {
             const litterSelect = document.getElementById('family-litter-select');
             litterSelect.innerHTML = '';
-            litters.forEach(l => {
+            let list = getLitters();
+            list.forEach(l => {
                 litterSelect.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>${l.name}</option>`;
             });
             updateFamilyPuppySelect();
@@ -898,7 +954,8 @@
         function renderAllLittersList() {
             let container = document.getElementById('all-litters-list');
             container.innerHTML = '';
-            litters.forEach(l => {
+            let list = getLitters();
+            list.forEach(l => {
                 container.innerHTML += `
                     <div class="bg-rose-50/50 p-4 rounded-2xl border border-rose-200 flex justify-between items-center">
                         <div>
@@ -994,7 +1051,8 @@
                 weights: [{ date: date, values: puppies.map(() => 250) }]
             };
 
-            litters.push(newLitter);
+            let list = getLitters();
+            list.push(newLitter);
             currentLitterId = newLitter.id;
             saveAllLitters();
             closeNewLitterModal();
@@ -1002,13 +1060,14 @@
         }
 
         function deleteLitter(id) {
-            if (litters.length <= 1) {
+            let list = getLitters();
+            if (list.length <= 1) {
                 alert("Vous ne pouvez pas supprimer la dernière portée active.");
                 return;
             }
             if (confirm("Êtes-vous sûr de vouloir supprimer cette portée ?")) {
-                litters = litters.filter(l => l.id !== id);
-                currentLitterId = litters[0].id;
+                appData.litters = list.filter(l => l.id !== id);
+                currentLitterId = appData.litters[0].id;
                 saveAllLitters();
                 initApp();
             }
@@ -1038,14 +1097,20 @@
                 const { data } = await supabaseClient.from('portees').select('*').eq('id', 'main_data').single();
                 if (data && data.content) {
                     let remoteString = JSON.stringify(data.content);
-                    let localString = JSON.stringify(litters);
+                    let localString = JSON.stringify(appData);
                     if (remoteString !== localString) {
-                        litters = data.content;
-                        if (!litters.find(l => l.id === currentLitterId) && litters.length > 0) {
-                            currentLitterId = litters[0].id;
+                        if (Array.isArray(data.content)) {
+                            appData.litters = data.content;
+                        } else if (data.content.litters) {
+                            appData = data.content;
                         }
-                        localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
+                        let list = getLitters();
+                        if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
+                            currentLitterId = list[0].id;
+                        }
+                        localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
                         
+                        renderHeaderLogo();
                         if (document.getElementById('family-view-container').classList.contains('hidden')) {
                             initApp();
                         } else {
