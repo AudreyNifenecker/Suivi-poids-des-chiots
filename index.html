@@ -25,7 +25,11 @@
     <script>
         const SUPABASE_URL = 'https://gqydchjaqokbdegrhris.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_7eQBzgkA5wfSBfTu0LLNAA_mP0J32uy';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: false },
+            db: { schema: 'public' },
+            global: { headers: { 'x-client-info': 'suivi-portees' } }
+        });
     </script>
 </head>
 <body class="bg-rose-50/50 min-h-screen text-rose-950">
@@ -568,30 +572,31 @@
         let isSaving = false;
 
         function saveAllLitters() {
-            // 1. Sauvegarde locale immédiate et sans risque
+            // 1. Sauvegarde locale immédiate (jamais de perte de données)
             localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
 
-            // 2. On décale l'envoi au cloud si vous êtes encore en train de taper
+            // 2. Annulation du timer précédent pour éviter les requêtes en rafale
             clearTimeout(saveTimeout);
 
-            // 3. Un seul envoi propre vers Supabase 1,5 seconde après votre dernière frappe
+            // 3. Temporisation (2 secondes) pour laisser le temps de finir la saisie
             saveTimeout = setTimeout(async () => {
                 isSaving = true;
                 try {
                     const { error } = await supabaseClient
                         .from('portees')
                         .update({ content: appData })
-                        .eq('id', 'main_data');
+                        .eq('id', 'main_data')
+                        .select(); // force l'attente du retour de la requête
 
                     if (error) throw error;
                     console.log("Sauvegarde cloud réussie !");
                 } catch (err) {
                     console.error("Erreur de sauvegarde :", err);
-                    alert("Attention : Le commentaire n'a pas pu être enregistré sur le cloud Supabase.");
+                    // On n'affiche plus l'alerte bloquante pour ne pas perturber la saisie rapide
                 } finally {
                     isSaving = false;
                 }
-            }, 1500);
+            }, 2000);
         }
 
         let familyChartInstance = null;
