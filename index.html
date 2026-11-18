@@ -231,7 +231,7 @@
                 </div>
 
                 <!-- CARTE CHIOT SÉLECTIONNÉ & BOUTON IMPRESSION (MASQUÉ EN VUE GLOBALE) -->
-                <div id="family-individual-card" class="space-y-4 bg-rose-50/40 p-5 rounded-2xl border border-rose-100">
+                <div id="family-individual-card" class="space-y-4 bg-rose-50/40 p-5 rounded-2xl border border-rose-100 hidden">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                         <div class="flex items-center gap-3">
                             <div id="family-puppy-photo-container"></div>
@@ -745,7 +745,7 @@
             const select = document.getElementById('family-puppy-select');
             select.innerHTML = '';
             
-            // OPTION PORTÉE COMPLÈTE EN PREMIER CHOIX
+            // OPTION PORTÉE COMPLÈTE EN PREMIER CHOIX SYSTÉMATIQUE
             select.innerHTML += `<option value="all">🐾 Vue globale de toute la portée</option>`;
 
             litter.puppies.forEach((p, idx) => {
