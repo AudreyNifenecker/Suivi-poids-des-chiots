@@ -496,35 +496,12 @@
         let activePuppyIndexForPhoto = null;
 
         function getLitters() {
-            if (!appData || !Array.isArray(appData.litters)) {
-                appData = { headerPhoto: "", litters: [] };
-            }
-            appData.litters = appData.litters.filter(l => l !== null && l !== undefined);
-            if (appData.litters.length === 0) {
-                appData.litters.push({
-                    id: "litter-1",
-                    name: "Portée Utopia 2026",
-                    birthDate: "2026-04-23",
-                    puppies: [
-                        { name: "BAIKA", sex: "Femelle", color: "#e11d48", photo: "" },
-                        { name: "BLACK JACK", sex: "Mâle", color: "#2563eb", photo: "" }
-                    ],
-                    weights: [
-                        { date: "2026-04-23", values: [287, 265], notes: ["Naissance", "Naissance"] }
-                    ]
-                });
-            }
-            return appData.litters;
+            return appData.litters || [];
         }
 
         function getCurrentLitter() {
             let list = getLitters();
-            let found = list.find(l => l && l.id === currentLitterId);
-            if (!found) {
-                currentLitterId = list[0].id;
-                return list[0];
-            }
-            return found;
+            return list.find(l => l.id === currentLitterId) || list[0];
         }
 
         async function loadDataFromSupabase() {
@@ -537,23 +514,21 @@
                 
                 if (data && data.content) {
                     if (Array.isArray(data.content)) {
-                        appData.litters = data.content.filter(l => l !== null && l !== undefined);
+                        appData.litters = data.content;
                     } else if (data.content.litters) {
                         appData = data.content;
-                        appData.litters = (appData.litters || []).filter(l => l !== null && l !== undefined);
                     }
                     appData.litters.forEach(l => {
                         if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
-                        if (!l.weights) l.weights = [];
-                        if (!l.puppies) l.puppies = [];
-                        l.weights.forEach(w => {
-                            if (!w.notes || !Array.isArray(w.notes)) {
-                                w.notes = l.puppies.map(() => "");
-                            }
-                            while (w.notes.length < l.puppies.length) {
-                                w.notes.push("");
-                            }
-                        });
+                        if (l.weights) {
+                            l.weights.forEach(w => {
+                                if (!w.notes && w.note) {
+                                    w.notes = l.puppies.map(() => w.note);
+                                } else if (!w.notes) {
+                                    w.notes = l.puppies.map(() => "");
+                                }
+                            });
+                        }
                     });
                     let list = getLitters();
                     if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
@@ -564,24 +539,15 @@
             } catch (err) {
                 let local = localStorage.getItem('crunchis_all_data') || localStorage.getItem('crunchis_all_litters');
                 if (local) {
-                    try {
-                        let parsed = JSON.parse(local);
-                        if (Array.isArray(parsed)) {
-                            appData.litters = parsed.filter(l => l !== null && l !== undefined);
-                        } else if (parsed && parsed.litters) {
-                            appData = parsed;
-                            appData.litters = (appData.litters || []).filter(l => l !== null && l !== undefined);
-                        }
-                        appData.litters.forEach(l => {
-                            if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
-                            if (!l.weights) l.weights = [];
-                            l.weights.forEach(w => {
-                                if (!w.notes || !Array.isArray(w.notes)) {
-                                    w.notes = l.puppies.map(() => "");
-                                }
-                            });
-                        });
-                    } catch (e) {}
+                    let parsed = JSON.parse(local);
+                    if (Array.isArray(parsed)) {
+                        appData.litters = parsed;
+                    } else {
+                        appData = parsed;
+                    }
+                    appData.litters.forEach(l => {
+                        if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
+                    });
                 }
             }
             renderHeaderLogo();
@@ -875,6 +841,7 @@
             let globalDoubleBanner = document.getElementById('family-global-double-banner');
 
             if (selectedVal === "all") {
+                // VUE GLOBALE DE TOUTE LA PORTÉE
                 individualCard.classList.add('hidden');
                 globalDoubleBanner.classList.remove('hidden');
                 updateFamilyGlobalDoubleSummary();
@@ -891,6 +858,7 @@
                     });
                 });
             } else {
+                // VUE INDIVIDUELLE D'UN CHIOT
                 individualCard.classList.remove('hidden');
                 globalDoubleBanner.classList.add('hidden');
 
@@ -918,6 +886,7 @@
                 let doubleDateStr = calculateDoubleWeight(litter, pIdx);
                 document.getElementById('fam-double-weight').innerHTML = `<div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppy.color};">${puppy.name}</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>`;
 
+                // NOTES DU CHIOT SÉLECTIONNÉ
                 let notesContainer = document.getElementById('family-notes-list');
                 notesContainer.innerHTML = '';
                 let hasNotes = false;
@@ -938,6 +907,7 @@
                     notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
                 }
 
+                // COURBE COMPARATIVE AVEC MISE EN ÉVIDENCE DU CHIOT SÉLECTIONNÉ
                 litter.puppies.forEach((p, idx) => {
                     let data = litter.weights.map(w => w.values[idx] || null);
                     datasets.push({
@@ -965,6 +935,7 @@
             renderFamilyCompleteTables();
         }
 
+        // --- TABLEAUX COMPARATIFS DE TOUTE LA PORTÉE DANS L'ESPACE FAMILLE ---
         function renderFamilyCompleteTables() {
             let litter = getCurrentLitter();
 
@@ -1012,6 +983,7 @@
             }
         }
 
+        // --- FICHE IMPRIMABLE CHIOT ---
         function openPrintableFiche() {
             let litter = getCurrentLitter();
             let selectedVal = document.getElementById('family-puppy-select').value;
@@ -1115,13 +1087,6 @@
             tbody.innerHTML = '';
 
             litter.weights.forEach((wRow, wIdx) => {
-                if (!wRow.notes || !Array.isArray(wRow.notes)) {
-                    wRow.notes = litter.puppies.map(() => "");
-                }
-                while (wRow.notes.length < litter.puppies.length) {
-                    wRow.notes.push("");
-                }
-
                 let tr = document.createElement('tr');
                 tr.className = "hover:bg-rose-50/50 transition";
 
@@ -1133,12 +1098,12 @@
                 litter.puppies.forEach((p, pIdx) => {
                     let tdVal = document.createElement('td');
                     tdVal.className = "p-3";
-                    let currentVal = wRow.values && wRow.values[pIdx] !== undefined ? wRow.values[pIdx] : '';
+                    let currentVal = wRow.values[pIdx] !== undefined ? wRow.values[pIdx] : '';
                     let currentNote = wRow.notes && wRow.notes[pIdx] !== undefined ? wRow.notes[pIdx] : '';
                     tdVal.innerHTML = `
                         <div class="flex flex-col gap-1.5">
-                            <input type="number" value="${currentVal}" placeholder="Poids g" oninput="updateWeightValLive(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
-                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" oninput="updatePuppyNoteLive(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
+                            <input type="number" value="${currentVal}" placeholder="Poids g" onchange="updateWeightVal(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
+                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" onchange="updatePuppyNote(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
                         </div>
                     `;
                     tr.appendChild(tdVal);
@@ -1186,22 +1151,20 @@
             updateWeightAlertBanner();
         }
 
-        function updateWeightValLive(wIdx, pIdx, val) {
+        function updateWeightVal(wIdx, pIdx, val) {
             let litter = getCurrentLitter();
-            if (!litter.weights[wIdx].values) litter.weights[wIdx].values = [];
             litter.weights[wIdx].values[pIdx] = val === '' ? 0 : parseFloat(val);
             saveAllLitters();
             updateAdminChartDoubleSummary();
             updateWeightAlertBanner();
+            renderPercentTable();
+            renderGainTable();
         }
 
-        function updatePuppyNoteLive(wIdx, pIdx, val) {
+        function updatePuppyNote(wIdx, pIdx, val) {
             let litter = getCurrentLitter();
-            if (!litter.weights[wIdx].notes || !Array.isArray(litter.weights[wIdx].notes)) {
+            if (!litter.weights[wIdx].notes) {
                 litter.weights[wIdx].notes = litter.puppies.map(() => "");
-            }
-            while (litter.weights[wIdx].notes.length < litter.puppies.length) {
-                litter.weights[wIdx].notes.push("");
             }
             litter.weights[wIdx].notes[pIdx] = val;
             saveAllLitters();
@@ -1375,7 +1338,6 @@
             let list = getLitters();
             
             list.forEach((l, index) => {
-                if (!l) return;
                 let upDisabled = index === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
                 let downDisabled = index === list.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
 
@@ -1391,8 +1353,8 @@
                                 </button>
                             </div>
                             <div>
-                                <h4 class="font-bold text-rose-950">${l.name || 'Portée'}</h4>
-                                <p class="text-xs text-rose-700">Né le ${l.birthDate ? l.birthDate.split('-').reverse().join('/') : '-'} • ${(l.puppies || []).length} chiots</p>
+                                <h4 class="font-bold text-rose-950">${l.name}</h4>
+                                <p class="text-xs text-rose-700">Né le ${l.birthDate ? l.birthDate.split('-').reverse().join('/') : '-'} • ${l.puppies.length} chiots</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
@@ -1407,7 +1369,7 @@
 
         function openEditLitterModal(id) {
             let list = getLitters();
-            let litter = list.find(l => l && l.id === id);
+            let litter = list.find(l => l.id === id);
             if (!litter) return;
 
             document.getElementById('edit-litter-id').value = litter.id;
@@ -1417,7 +1379,7 @@
             let container = document.getElementById('edit-puppies-container');
             container.innerHTML = '';
 
-            (litter.puppies || []).forEach((p, idx) => {
+            litter.puppies.forEach((p, idx) => {
                 container.innerHTML += `
                     <div class="flex items-center gap-2 bg-rose-50/40 p-2.5 rounded-xl border border-rose-100 edit-puppy-row">
                         <input type="text" value="${p.name}" placeholder="Nom du chiot" class="edit-p-name flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white font-semibold" data-photo="${p.photo || ''}" data-color="${p.color || defaultColors[idx % defaultColors.length]}">
@@ -1464,16 +1426,16 @@
             }
 
             let list = getLitters();
-            let litter = list.find(l => l && l.id === id);
+            let litter = list.find(l => l.id === id);
             if (litter) {
                 litter.name = newName;
                 litter.birthDate = newDate;
 
-                (litter.weights || []).forEach(w => {
+                litter.weights.forEach(w => {
                     let newValues = [];
                     let newNotes = [];
                     for (let i = 0; i < newPuppies.length; i++) {
-                        newValues.push(w.values && w.values[i] !== undefined ? w.values[i] : 250);
+                        newValues.push(w.values[i] !== undefined ? w.values[i] : 250);
                         newNotes.push(w.notes && w.notes[i] !== undefined ? w.notes[i] : "");
                     }
                     w.values = newValues;
@@ -1582,7 +1544,6 @@
                         weights: weights
                     };
 
-                    if (!appData.litters) appData.litters = [];
                     appData.litters.push(importedLitter);
                     currentLitterId = importedLitter.id;
                     saveAllLitters();
@@ -1678,8 +1639,8 @@
                 weights: [{ date: date, values: puppies.map(() => 250), notes: puppies.map(() => "Naissance") }]
             };
 
-            if (!appData.litters) appData.litters = [];
-            appData.litters.push(newLitter);
+            let list = getLitters();
+            list.push(newLitter);
             currentLitterId = newLitter.id;
             saveAllLitters();
             closeNewLitterModal();
@@ -1693,7 +1654,7 @@
                 return;
             }
             if (confirm("Êtes-vous sûr de vouloir supprimer cette portée ?")) {
-                appData.litters = list.filter(l => l && l.id !== id);
+                appData.litters = list.filter(l => l.id !== id);
                 currentLitterId = appData.litters[0].id;
                 saveAllLitters();
                 initApp();
@@ -1733,10 +1694,9 @@
                     let localString = JSON.stringify(appData);
                     if (remoteString !== localString) {
                         if (Array.isArray(data.content)) {
-                            appData.litters = data.content.filter(l => l !== null && l !== undefined);
+                            appData.litters = data.content;
                         } else if (data.content.litters) {
                             appData = data.content;
-                            appData.litters = (appData.litters || []).filter(l => l !== null && l !== undefined);
                         }
                         appData.litters.forEach(l => {
                             if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
