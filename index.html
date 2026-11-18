@@ -98,7 +98,7 @@
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                     <div>
                         <h2 id="litter-main-title" class="text-xl font-bold text-rose-950 flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-plus text-rose-500"></i> Ajouter une pesée journalière
+                            <i class="fa-solid fa-calendar-plus text-rose-500"></i> Ajouter une pesée journalière & Notes par chiot
                         </h2>
                         <p id="litter-info-details" class="text-xs text-rose-700 mt-1">Date de naissance : - | Chiots : 0</p>
                     </div>
@@ -618,7 +618,7 @@
         function initApp() {
             let litter = getCurrentLitter();
             if (!litter) return;
-            document.getElementById('litter-main-title').innerHTML = `<i class="fa-solid fa-calendar-plus text-rose-500"></i> ${litter.name} - Pesées journalières`;
+            document.getElementById('litter-main-title').innerHTML = `<i class="fa-solid fa-calendar-plus text-rose-500"></i> ${litter.name} - Pesées journalières & Notes par chiot`;
             let formattedDate = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
             document.getElementById('litter-info-details').innerText = `Date de naissance : ${formattedDate} | Chiots : ${litter.puppies.length}`;
             
@@ -1042,9 +1042,9 @@
                     let currentVal = wRow.values[pIdx] !== undefined ? wRow.values[pIdx] : '';
                     let currentNote = wRow.notes && wRow.notes[pIdx] !== undefined ? wRow.notes[pIdx] : '';
                     tdVal.innerHTML = `
-                        <div class="flex flex-col gap-1">
-                            <input type="number" value="${currentVal}" placeholder="Poids g" onchange="updateWeightVal(${wIdx}, ${pIdx}, this.value)" class="w-24 border border-rose-200 rounded-lg px-2 py-1 text-sm bg-white outline-none text-center font-medium">
-                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" onchange="updatePuppyNote(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2 py-0.5 text-[11px] bg-white outline-none italic text-rose-800">
+                        <div class="flex flex-col gap-1.5">
+                            <input type="number" value="${currentVal}" placeholder="Poids g" onchange="updateWeightVal(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
+                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" onchange="updatePuppyNote(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
                         </div>
                     `;
                     tr.appendChild(tdVal);
