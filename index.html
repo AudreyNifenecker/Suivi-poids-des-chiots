@@ -519,7 +519,6 @@
                         appData = data.content;
                     }
                     appData.litters.forEach(l => {
-                        if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
                         if (l.weights) {
                             l.weights.forEach(w => {
                                 if (!w.notes && w.note) {
@@ -545,9 +544,6 @@
                     } else {
                         appData = parsed;
                     }
-                    appData.litters.forEach(l => {
-                        if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
-                    });
                 }
             }
             renderHeaderLogo();
@@ -1520,12 +1516,11 @@
                         }
 
                         let values = [];
-                        let notes = [];
                         for (let c = 0; c < puppies.length; c++) {
                             let val = parseFloat(row[c + 1]);
                             values.push(isNaN(val) ? 0 : val);
-                            notes.push("");
                         }
+                        let notes = puppies.map(() => "");
                         weights.push({ date: dateStr, values: values, notes: notes });
                     }
 
@@ -1698,9 +1693,6 @@
                         } else if (data.content.litters) {
                             appData = data.content;
                         }
-                        appData.litters.forEach(l => {
-                            if (!l.id) l.id = "litter-" + Math.random().toString(36).substr(2, 9);
-                        });
                         let list = getLitters();
                         if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
                             currentLitterId = list[0].id;
