@@ -564,21 +564,36 @@
             }
         }
 
-     async function saveAllLitters() {
-    localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
-    try {
-        const { error } = await supabaseClient
-            .from('portees')
-            .update({ content: appData })
-            .eq('id', 'main_data');
-            
-        if (error) throw error;
-        console.log("Sauvegarde cloud réussie !");
-    } catch (err) {
-        console.error("Erreur de sauvegarde :", err);
-        alert("Attention : Le commentaire n'a pas pu être enregistré sur le cloud Supabase. Vérifiez votre connexion.");
-    }
-}
+        let saveTimeout = null;
+        let isSaving = false;
+
+        function saveAllLitters() {
+            // 1. Sauvegarde locale immédiate et sans risque
+            localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
+
+            // 2. On décale l'envoi au cloud si vous êtes encore en train de taper
+            clearTimeout(saveTimeout);
+
+            // 3. Un seul envoi propre vers Supabase 1,5 seconde après votre dernière frappe
+            saveTimeout = setTimeout(async () => {
+                isSaving = true;
+                try {
+                    const { error } = await supabaseClient
+                        .from('portees')
+                        .update({ content: appData })
+                        .eq('id', 'main_data');
+
+                    if (error) throw error;
+                    console.log("Sauvegarde cloud réussie !");
+                } catch (err) {
+                    console.error("Erreur de sauvegarde :", err);
+                    alert("Attention : Le commentaire n'a pas pu être enregistré sur le cloud Supabase.");
+                } finally {
+                    isSaving = false;
+                }
+            }, 1500);
+        }
+
         let familyChartInstance = null;
         let growthChartInstance = null;
         let gainBarChartInstance = null;
@@ -847,7 +862,6 @@
             let globalDoubleBanner = document.getElementById('family-global-double-banner');
 
             if (selectedVal === "all") {
-                // VUE GLOBALE DE TOUTE LA PORTÉE
                 individualCard.classList.add('hidden');
                 globalDoubleBanner.classList.remove('hidden');
                 updateFamilyGlobalDoubleSummary();
@@ -864,7 +878,6 @@
                     });
                 });
             } else {
-                // VUE INDIVIDUELLE D'UN CHIOT
                 individualCard.classList.remove('hidden');
                 globalDoubleBanner.classList.add('hidden');
 
@@ -892,7 +905,6 @@
                 let doubleDateStr = calculateDoubleWeight(litter, pIdx);
                 document.getElementById('fam-double-weight').innerHTML = `<div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppy.color};">${puppy.name}</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>`;
 
-                // NOTES DU CHIOT SÉLECTIONNÉ
                 let notesContainer = document.getElementById('family-notes-list');
                 notesContainer.innerHTML = '';
                 let hasNotes = false;
@@ -913,7 +925,6 @@
                     notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
                 }
 
-                // COURBE COMPARATIVE AVEC MISE EN ÉVIDENCE DU CHIOT SÉLECTIONNÉ
                 litter.puppies.forEach((p, idx) => {
                     let data = litter.weights.map(w => w.values[idx] || null);
                     datasets.push({
@@ -941,7 +952,6 @@
             renderFamilyCompleteTables();
         }
 
-        // --- TABLEAUX COMPARATIFS DE TOUTE LA PORTÉE DANS L'ESPACE FAMILLE ---
         function renderFamilyCompleteTables() {
             let litter = getCurrentLitter();
 
@@ -989,7 +999,6 @@
             }
         }
 
-        // --- FICHE IMPRIMABLE CHIOT ---
         function openPrintableFiche() {
             let litter = getCurrentLitter();
             let selectedVal = document.getElementById('family-puppy-select').value;
@@ -1692,6 +1701,7 @@
         }
 
         setInterval(async () => {
+            if (isSaving) return;
             try {
                 const { data } = await supabaseClient.from('portees').select('*').eq('id', 'main_data').single();
                 if (data && data.content) {
