@@ -72,6 +72,18 @@
 
         <!-- TAB 1: SAISIE & POIDS -->
         <div id="tab-saisie" class="tab-content active space-y-6">
+            <!-- Sélecteur rapide de portée -->
+            <div class="bg-white rounded-2xl shadow p-4 border border-rose-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="w-full md:w-1/2">
+                    <label class="block text-xs font-bold text-rose-900 mb-1"><i class="fa-solid fa-filter mr-1 text-rose-500"></i> Choisir la portée active :</label>
+                    <select id="admin-litter-select" onchange="onAdminLitterChange()" class="w-full border border-rose-200 rounded-xl px-4 py-2 text-sm font-semibold bg-rose-50/30 outline-none focus:ring-2 focus:ring-rose-400">
+                    </select>
+                </div>
+                <div class="text-xs text-rose-700 text-right hidden md:block">
+                    <span>Sélectionnez instantanément la portée à peser.</span>
+                </div>
+            </div>
+
             <div class="bg-white rounded-2xl shadow p-6 border border-rose-100">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                     <div>
@@ -396,11 +408,26 @@
             let formattedDate = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
             document.getElementById('litter-info-details').innerText = `Date de naissance : ${formattedDate} | Chiots : ${litter.puppies.length}`;
             
+            updateAdminLitterSelect();
             renderWeightsTable();
             renderPercentTable();
             renderGainTable();
             updateCharts();
             updateBarCharts();
+        }
+
+        function updateAdminLitterSelect() {
+            const select = document.getElementById('admin-litter-select');
+            if (!select) return;
+            select.innerHTML = '';
+            litters.forEach(l => {
+                select.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>🐾 ${l.name} (${l.puppies.length} chiots)</option>`;
+            });
+        }
+
+        function onAdminLitterChange() {
+            currentLitterId = document.getElementById('admin-litter-select').value;
+            initApp();
         }
 
         async function openFamilyPortal() {
