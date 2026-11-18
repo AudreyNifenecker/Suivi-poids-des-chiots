@@ -254,7 +254,7 @@
                         </div>
                     </div>
 
-                    <!-- ENCADRÉ COMPTEUR D'ÂGE AUTOMATIQUE (masqué si décédé) -->
+                    <!-- ENCADRÉ COMPTEUR D'ÂGE AUTOMATIQUE (masqué si désactivé) -->
                     <div id="puppy-age-banner" class="bg-white border-2 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div class="flex items-center gap-3 w-full sm:w-auto">
                             <div id="puppy-ribbon-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md flex-shrink-0">
@@ -479,7 +479,7 @@
                     <input type="date" id="edit-litter-date" class="w-full border border-rose-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-rose-900 mb-2">Composition des chiots (cochez "Décédé" si besoin) :</label>
+                    <label class="block text-sm font-semibold text-rose-900 mb-2">Composition des chiots (cochez pour masquer uniquement le compteur d'âge) :</label>
                     <div id="edit-puppies-container" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
                 </div>
             </div>
@@ -528,7 +528,6 @@
             return list.find(l => l.id === currentLitterId) || list[0];
         }
 
-        // Fonction de compression automatique des images (Max 300px, qualité 70%)
         function compressImage(file, maxWidth = 300, quality = 0.7) {
             return new Promise((resolve) => {
                 let reader = new FileReader();
@@ -728,7 +727,6 @@
             let alerts = [];
 
             litter.puppies.forEach((p, pIdx) => {
-                if (p.deceased) return; // Ignorer les chiots décédés des alertes
                 let prevVal = prevRow.values[pIdx] || 0;
                 let currVal = currRow.values[pIdx] || 0;
 
@@ -830,8 +828,7 @@
 
             litter.puppies.forEach((p, idx) => {
                 let icon = p.sex === 'Mâle' ? '♂' : '♀';
-                let decLabel = p.deceased ? ' (Décédé)' : '';
-                select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})${decLabel}</option>`;
+                select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})</option>`;
             });
             renderFamilyView();
         }
@@ -873,7 +870,6 @@
             container.innerHTML = '';
 
             litter.puppies.forEach((p, pIdx) => {
-                if (p.deceased) return;
                 let res = calculateDoubleWeight(litter, pIdx);
                 container.innerHTML += `
                     <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
@@ -890,7 +886,6 @@
             container.innerHTML = '';
 
             litter.puppies.forEach((p, pIdx) => {
-                if (p.deceased) return;
                 let res = calculateDoubleWeight(litter, pIdx);
                 container.innerHTML += `
                     <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
@@ -929,7 +924,6 @@
                 gainHeading.innerHTML = `<i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes) - Toute la portée`;
 
                 litter.puppies.forEach((p, idx) => {
-                    if (p.deceased) return; // Ne pas afficher les décédés sur le graphe global
                     let data = litter.weights.map(w => w.values[idx] || null);
                     datasets.push({
                         label: p.name,
@@ -957,7 +951,7 @@
                 let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
                 document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
 
-                // --- GESTION DE L'ENCADRÉ D'ÂGE (Masqué si décédé) ---
+                // --- GESTION DE L'ENCADRÉ D'ÂGE (Masqué si option cochée) ---
                 if (puppy.deceased) {
                     ageBanner.classList.add('hidden');
                 } else {
@@ -1059,7 +1053,6 @@
                     notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
                 }
 
-                // Courbe individuelle
                 let data = litter.weights.map(w => w.values[pIdx] || null);
                 datasets.push({
                     label: puppy.name,
@@ -1129,7 +1122,6 @@
 
             } else {
                 pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
-                    if (p.deceased) return '';
                     let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                     return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
                 }).join('');
@@ -1142,7 +1134,6 @@
                     tr.className = "hover:bg-rose-50/50";
                     tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
                     litter.puppies.forEach((p, idx) => {
-                        if (p.deceased) return;
                         let prev = litter.weights[i-1].values[idx] || 0;
                         let curr = litter.weights[i].values[idx] || 0;
                         let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
@@ -1153,7 +1144,6 @@
                 }
 
                 gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
-                    if (p.deceased) return '';
                     let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                     return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
                 }).join('');
@@ -1166,7 +1156,6 @@
                     tr.className = "hover:bg-rose-50/50";
                     tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
                     litter.puppies.forEach((p, idx) => {
-                        if (p.deceased) return;
                         let prev = litter.weights[i-1].values[idx] || 0;
                         let curr = litter.weights[i].values[idx] || 0;
                         let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
@@ -1311,12 +1300,11 @@
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
             litter.puppies.forEach((p, pIdx) => {
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-8 h-8 rounded-full object-cover inline-block mr-1.5 border-2 border-white shadow-sm">` : `<i class="fa-solid fa-dog mr-1"></i>`;
-                let decBadge = p.deceased ? ' ✝' : '';
                 theadTr.innerHTML += `
                     <th class="p-3 text-center" style="color:${p.color};">
                         <div class="inline-flex items-center justify-center gap-1.5 cursor-pointer group" onclick="triggerQuickPhotoChange(${pIdx})" title="Cliquer pour modifier la photo">
                             ${imgTag}
-                            <span class="group-hover:underline">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})${decBadge}</span>
+                            <span class="group-hover:underline">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</span>
                             <i class="fa-solid fa-camera text-[10px] text-rose-500 opacity-70 group-hover:opacity-100 ml-0.5"></i>
                         </div>
                     </th>`;
@@ -1376,7 +1364,6 @@
             let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
             let datasets = [];
             litter.puppies.forEach((p, idx) => {
-                if (p.deceased) return; // Ne pas tracer les décédés sur le graph admin
                 datasets.push({
                     label: p.name,
                     data: litter.weights.map(w => w.values[idx] || null),
@@ -1408,7 +1395,6 @@
 
             let datasetsGain = [];
             litter.puppies.forEach((p, pIdx) => {
-                if (p.deceased) return;
                 let data = [];
                 for (let i = 1; i < litter.weights.length; i++) {
                     let prev = litter.weights[i-1].values[pIdx] || 0;
@@ -1429,7 +1415,6 @@
 
             let datasetsPercent = [];
             litter.puppies.forEach((p, pIdx) => {
-                if (p.deceased) return;
                 let data = [];
                 for (let i = 1; i < litter.weights.length; i++) {
                     let prev = litter.weights[i-1].values[pIdx] || 0;
@@ -1453,7 +1438,6 @@
             let theadTr = table.querySelector('thead tr');
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
             litter.puppies.forEach(p => {
-                if (p.deceased) return;
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                 theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
             });
@@ -1467,7 +1451,6 @@
                 tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
 
                 litter.puppies.forEach((p, pIdx) => {
-                    if (p.deceased) return;
                     let prev = litter.weights[i-1].values[pIdx] || 0;
                     let curr = litter.weights[i].values[pIdx] || 0;
                     let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
@@ -1484,7 +1467,6 @@
             let theadTr = table.querySelector('thead tr');
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
             litter.puppies.forEach(p => {
-                if (p.deceased) return;
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                 theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
             });
@@ -1498,7 +1480,6 @@
                 tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
 
                 litter.puppies.forEach((p, pIdx) => {
-                    if (p.deceased) return;
                     let prev = litter.weights[i-1].values[pIdx] || 0;
                     let curr = litter.weights[i].values[pIdx] || 0;
                     let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
@@ -1592,7 +1573,7 @@
                             <option value="Femelle" ${p.sex === 'Femelle' ? 'selected' : ''}>Femelle</option>
                         </select>
                         <label class="flex items-center gap-1.5 text-xs text-rose-800 font-medium whitespace-nowrap cursor-pointer">
-                            <input type="checkbox" class="edit-p-deceased rounded text-rose-500 focus:ring-rose-400" ${checkedAttr}> Décédé
+                            <input type="checkbox" class="edit-p-deceased rounded text-rose-500 focus:ring-rose-400" ${checkedAttr}> Masquer le compteur d'âge
                         </label>
                         <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
                     </div>
