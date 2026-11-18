@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suivi de Portées - Le Fief des Petits Crunchis</title>
-    <!-- Chargement de la bibliothèque Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f7f6; color: #333; }
@@ -13,7 +12,7 @@
         input, textarea, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         button { background-color: #3498db; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { background-color: #2980b9; }
-        .litter-item { border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px; }
+        .litter-item { border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -22,8 +21,7 @@
 
     <div class="card">
         <h3>Ajouter une info / pesée</h3>
-        <input type="text" id="litterName" placeholder="Nom du chiot ou de la portée (ex: Portée Valkyrie - Rouge)">
-        <textarea id="litterData" placeholder="Détails, poids, notes de la journée..."></textarea>
+        <input type="text" id="litterName" placeholder="Nom ou détails (ex: Portée Valkyrie - 350g)">
         <button onclick="saveData()">Enregistrer et synchroniser</button>
     </div>
 
@@ -34,13 +32,11 @@
     </div>
 
     <script>
-        // Configuration Supabase avec vos identifiants
         const SUPABASE_URL = 'https://gqydchjaqokbdegrhris.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeWRjaGphcW9rYmRlZ3JocmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5NTM2MjMsImV4cCI6MjExMDUyOTYyM30.YpnIfOhnc4aH7MK-_WC9_GWfJaaaJmD7e4YzhurMHKs';
 
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Charger les données au démarrage
         async function loadData() {
             const loadingEl = document.getElementById('loading');
             const listEl = document.getElementById('dataList');
@@ -52,51 +48,50 @@
 
             loadingEl.style.display = 'none';
             if (error) {
-                listEl.innerHTML = '<p style="color:red;">Erreur de chargement : ' + error.message + '</p>';
+                listEl.innerHTML = '<p style="color:red;">Erreur : ' + error.message + '</p>';
                 return;
             }
 
-            if (data.length === 0) {
+            if (!data || data.length === 0) {
                 listEl.innerHTML = '<p>Aucune donnée pour le moment.</p>';
                 return;
             }
 
-            listEl.innerHTML = data.map(item => `
-                <div class="litter-item">
-                    <strong>${item.name || 'Sans nom'}</strong><br>
-                    <small>${new Date(item.created_at).toLocaleString()}</small>
-                    <p>${item.description || item.content || 'Pas de détails'}</p>
-                </div>
-            `).join('');
+            listEl.innerHTML = data.map(item => {
+                // Récupère n'importe quel texte disponible dans la ligne
+                const textContent = item.name || item.content || item.details || JSON.stringify(item);
+                return `
+                    <div class="litter-item">
+                        <strong>${textContent}</strong><br>
+                        <small>${new Date(item.created_at).toLocaleString()}</small>
+                    </div>
+                `;
+            }).join('');
         }
 
-        // Enregistrer de nouvelles données
         async function saveData() {
-            const name = document.getElementById('litterName').value;
-            const description = document.getElementById('litterData').value;
+            const val = document.getElementById('litterName').value;
 
-            if (!name && !description) {
-                alert('Veuillez remplir au moins un champ.');
+            if (!val) {
+                alert('Veuillez remplir le champ.');
                 return;
             }
 
+            // On envoie directement dans la colonne 'name' qui existe de base
             const { error } = await _supabase
                 .from('Portées')
-                .insert([{ name: name, description: description }]);
+                .insert([{ name: val }]);
 
             if (error) {
                 alert('Erreur lors de l\'enregistrement : ' + error.message);
             } else {
                 document.getElementById('litterName').value = '';
-                document.getElementById('litterData').value = '';
                 loadData();
             }
         }
 
-        // Lancer le chargement initial
         loadData();
 
-        // Synchronisation en temps réel (zéro action requise, s'actualise tout seul)
         _supabase
             .channel('public:Portées')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'Portées' }, payload => {
