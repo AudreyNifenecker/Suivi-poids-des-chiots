@@ -9,15 +9,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Poppins', sans-serif; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-    </style><script>
-    const SUPABASE_URL = 'https://gqydchjaqokbdegrhris.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeWRjaGphcW9rYmRlZ3JocmlzIicm9sZSI6ImFub24iLCJpYXQiOjE3MjkzMjk0NDEsImV4cCI6MjA0NDkwOTQ0MX0';
+    </style>
+    <script>
+        const SUPABASE_URL = 'https://gqydchjaqokbdegrhris.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeWRjaGphcW9rYmRlZ3JocmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkzMjk0NDEsImV4cCI6MjA0NDkwOTQ0MX0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     </script>
 </head>
 <body class="bg-rose-50/50 min-h-screen text-rose-950">
@@ -326,12 +329,37 @@
         let currentLitterId = litters[0].id;
         let activePuppyIndexForPhoto = null;
 
+        // Synchronisation Supabase (Cloud)
+        async function loadDataFromSupabase() {
+            try {
+                const { data, error } = await supabaseClient.from('elevage_data').select('*').eq('id', 'main_data').single();
+                if (data && data.content) {
+                    litters = data.content;
+                    if (!litters.find(l => l.id === currentLitterId) && litters.length > 0) {
+                        currentLitterId = litters[0].id;
+                    }
+                    localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
+                }
+            } catch (err) {
+                console.log("Mode local actif");
+            }
+        }
+
+        async function saveDataToSupabase() {
+            try {
+                await supabaseClient.from('elevage_data').upsert({ id: 'main_data', content: litters });
+            } catch (err) {
+                console.error("Erreur de synchronisation cloud :", err);
+            }
+        }
+
         function getCurrentLitter() {
             return litters.find(l => l.id === currentLitterId) || litters[0];
         }
 
         function saveAllLitters() {
             localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
+            saveDataToSupabase();
         }
 
         let familyChartInstance = null;
@@ -373,10 +401,9 @@
             renderGainTable();
             updateCharts();
             updateBarCharts();
-            saveAllLitters();
         }
 
-        function openFamilyPortal() {
+        async function openFamilyPortal() {
             document.getElementById('admin-nav').classList.add('hidden');
             document.querySelector('header button[onclick="openNewLitterModal()"]').classList.add('hidden');
             document.querySelector('header button[onclick="exportToExcel()"]').classList.add('hidden');
@@ -384,13 +411,13 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('family-view-container').classList.remove('hidden');
 
-            document.getElementById('return-admin-btn').classList.add('hidden');
-
-            let savedLitters = localStorage.getItem('crunchis_all_litters');
-            if (savedLitters) {
-                litters = JSON.parse(savedLitters);
+            if (window.location.hash === '#famille') {
+                document.getElementById('return-admin-btn').classList.add('hidden');
+            } else {
+                document.getElementById('return-admin-btn').classList.remove('hidden');
             }
 
+            await loadDataFromSupabase();
             updateFamilyLitterSelect();
         }
 
@@ -585,7 +612,7 @@
             litter.weights.forEach((wRow, wIdx) => {
                 let tr = document.createElement('tr');
                 tr.className = "hover:bg-rose-50/50 transition";
-                
+
                 let tdDate = document.createElement('td');
                 tdDate.className = "p-3 font-semibold";
                 tdDate.innerHTML = `<input type="date" value="${wRow.date}" onchange="updateWeightDate(${wIdx}, this.value)" class="border border-rose-200 rounded-lg px-2 py-1 text-sm bg-white outline-none">`;
@@ -643,6 +670,8 @@
             litter.weights[wIdx].values[pIdx] = val === '' ? 0 : parseFloat(val);
             saveAllLitters();
             updateAdminChartDoubleSummary();
+            renderPercentTable();
+            renderGainTable();
         }
 
         function deleteWeightRow(wIdx) {
@@ -732,7 +761,7 @@
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                 theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
             });
-            
+
             let tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
 
@@ -740,7 +769,7 @@
                 let tr = document.createElement('tr');
                 tr.className = "hover:bg-rose-50/50";
                 tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
-                
+
                 litter.puppies.forEach((p, pIdx) => {
                     let prev = litter.weights[i-1].values[pIdx] || 0;
                     let curr = litter.weights[i].values[pIdx] || 0;
@@ -761,7 +790,7 @@
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                 theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
             });
-            
+
             let tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
 
@@ -769,7 +798,7 @@
                 let tr = document.createElement('tr');
                 tr.className = "hover:bg-rose-50/50";
                 tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
-                
+
                 litter.puppies.forEach((p, pIdx) => {
                     let prev = litter.weights[i-1].values[pIdx] || 0;
                     let curr = litter.weights[i].values[pIdx] || 0;
@@ -788,7 +817,7 @@
             pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => {
                 let p = litter.puppies[idx];
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
-                return `<th class="p-3 text-center" style="color:${p.color}">${imgTag}${p.name}</th>`;
+                return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
             }).join('');
             let pTbody = pTable.querySelector('tbody');
             pTbody.innerHTML = '';
@@ -810,7 +839,7 @@
             gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + pIndices.map(idx => {
                 let p = litter.puppies[idx];
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
-                return `<th class="p-3 text-center" style="color:${p.color}">${imgTag}${p.name}</th>`;
+                return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
             }).join('');
             let gTbody = gTable.querySelector('tbody');
             gTbody.innerHTML = '';
@@ -826,6 +855,11 @@
                 });
                 gTbody.appendChild(tr);
             }
+        }
+
+        function switchActiveLitter(id) {
+            currentLitterId = id;
+            initApp();
         }
 
         function renderAllLittersList() {
@@ -890,7 +924,7 @@
                 let pName = document.getElementById(`puppy-name-${i}`).value || `Chiot ${i}`;
                 let pSex = document.getElementById(`puppy-sex-${i}`).value;
                 let fileInput = document.getElementById(`puppy-photo-${i}`);
-                
+
                 let puppyObj = {
                     name: pName.toUpperCase(),
                     sex: pSex,
@@ -966,7 +1000,8 @@
             XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_poids.xlsx`);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadDataFromSupabase();
             if (window.location.hash === '#famille') {
                 openFamilyPortal();
             } else {
