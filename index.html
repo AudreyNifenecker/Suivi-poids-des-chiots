@@ -179,7 +179,6 @@
 
         <!-- VUE FAMILLE CIBLÉE -->
         <div id="family-view-container" class="hidden space-y-6">
-            <!-- Barre supérieure espace famille -->
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
                 <div class="flex items-center gap-3">
                     <i class="fa-solid fa-shield-dog text-amber-600 text-xl"></i>
@@ -197,7 +196,6 @@
             </div>
 
             <div class="bg-white rounded-2xl shadow p-6 border border-rose-100 space-y-6">
-                <!-- SÉLECTEUR DE PORTÉE DANS LA VUE FAMILLE -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-rose-50/50 p-4 rounded-2xl border border-rose-100">
                     <div>
                         <label class="block text-xs font-bold text-rose-900 mb-1">1. Choisir la portée :</label>
@@ -211,7 +209,6 @@
                     </div>
                 </div>
 
-                <!-- SECTION 1 : COURBE DE CROISSANCE & STATS -->
                 <div class="space-y-4">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                         <div class="flex items-center gap-3">
@@ -223,7 +220,6 @@
                         </div>
                     </div>
 
-                    <!-- Cartes Statistiques -->
                     <div id="family-stats-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
                             <span class="text-xs text-rose-700 uppercase font-semibold">Poids de naissance</span>
@@ -239,7 +235,6 @@
                         </div>
                     </div>
 
-                    <!-- Indicateur Poids Doublé au-dessus du graphique -->
                     <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
                         <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) :</span>
                         <div id="fam-double-weight" class="flex flex-wrap gap-2 text-xs text-amber-950 font-medium"></div>
@@ -250,7 +245,6 @@
                     </div>
                 </div>
 
-                <!-- SECTION 2 : TABLEAUX CIBLÉS -->
                 <div class="space-y-8 pt-6 border-t border-rose-100">
                     <div>
                         <h3 class="text-xl font-bold text-rose-950 mb-2 flex items-center gap-2">
@@ -277,7 +271,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -316,7 +309,6 @@
         </div>
     </div>
 
-    <!-- INPUT FICHIER CACHÉ POUR MODIFICATION RAPIDE DE PHOTO -->
     <input type="file" id="quick-photo-input" accept="image/*" class="hidden" onchange="handleQuickPhotoUpload(this)">
 
     <script>
@@ -341,11 +333,11 @@
         let currentLitterId = litters[0].id;
         let activePuppyIndexForPhoto = null;
 
-        // Synchronisation Cloud Supabase prioritaire
+        // Synchronisation Cloud Supabase connectée à la table "Portées"
         async function loadDataFromSupabase() {
             try {
                 const { data, error } = await supabaseClient
-                    .from('elevage_data')
+                    .from('Portées')
                     .select('*')
                     .eq('id', 'main_data')
                     .single();
@@ -365,7 +357,7 @@
 
         async function saveDataToSupabase() {
             try {
-                await supabaseClient.from('elevage_data').upsert({ id: 'main_data', content: litters });
+                await supabaseClient.from('Portées').upsert({ id: 'main_data', content: litters });
             } catch (err) {
                 console.error("Erreur de synchronisation cloud :", err);
             }
@@ -1033,10 +1025,9 @@
             XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_poids.xlsx`);
         }
 
-        // Auto-actualisation en direct (Toutes les 5 secondes)
         setInterval(async () => {
             try {
-                const { data } = await supabaseClient.from('elevage_data').select('*').eq('id', 'main_data').single();
+                const { data } = await supabaseClient.from('Portées').select('*').eq('id', 'main_data').single();
                 if (data && data.content) {
                     let remoteString = JSON.stringify(data.content);
                     let localString = JSON.stringify(litters);
@@ -1057,7 +1048,6 @@
             } catch (e) {}
         }, 5000);
 
-        // Correctif anti-cache Chrome mobile (`pageshow`)
         window.addEventListener('pageshow', async function(event) {
             if (event.persisted) {
                 window.location.reload();
