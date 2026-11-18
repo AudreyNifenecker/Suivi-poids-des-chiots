@@ -132,7 +132,7 @@
         <!-- TAB 2: COURBE (ADMIN) -->
         <div id="tab-courbe" class="tab-content bg-white rounded-2xl shadow p-6 border border-rose-100 space-y-4">
             <h2 class="text-xl font-bold text-rose-950 flex items-center gap-2">
-                <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de Croissance Ponderale (g)
+                <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de Croissance Pondérale (g)
             </h2>
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
                 <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) - Liste de la portée :</span>
@@ -283,13 +283,13 @@
                     </div>
                 </div>
 
-                <!-- COURBE COMPARATIVE DE TOUTE LA PORTÉE ET BANDEAU POIDS DOUBLÉ GLOBAL -->
+                <!-- COURBE DE LA PORTÉE OU COURBE EXCLUSIVE DU CHIOT -->
                 <div class="space-y-4 pt-4 border-t border-rose-100">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                        <h3 class="text-xl font-bold text-rose-950 flex items-center gap-2">
+                        <h3 id="family-chart-heading" class="text-xl font-bold text-rose-950 flex items-center gap-2">
                             <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe comparative de toute la portée
                         </h3>
-                        <p class="text-xs text-rose-700">Visualisez l'évolution de tous les frères et sœurs en même temps.</p>
+                        <p id="family-chart-subheading" class="text-xs text-rose-700">Visualisez l'évolution de tous les frères et sœurs en même temps.</p>
                     </div>
 
                     <!-- BANDEAU GLOBAL POIDS DOUBLÉ (VISIBLE EN VUE GLOBALE) -->
@@ -303,10 +303,10 @@
                     </div>
                 </div>
 
-                <!-- TABLEAUX COMPARATIFS DE TOUTE LA PORTÉE -->
+                <!-- TABLEAUX COMPARATIFS OU TABLEAUX EXCLUSIFS DU CHIOT -->
                 <div class="space-y-8 pt-6 border-t border-rose-100">
                     <div>
-                        <h3 class="text-xl font-bold text-rose-950 mb-2 flex items-center gap-2">
+                        <h3 id="family-percent-heading" class="text-xl font-bold text-rose-950 mb-2 flex items-center gap-2">
                             <i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier (%) - Toute la portée
                         </h3>
                         <p class="text-xs text-rose-600 mb-4">Seuil d'alerte critique : <span class="text-red-600 font-bold">&lt; 3%</span></p>
@@ -319,7 +319,7 @@
                     </div>
 
                     <div>
-                        <h3 class="text-xl font-bold text-rose-950 mb-2 flex items-center gap-2">
+                        <h3 id="family-gain-heading" class="text-xl font-bold text-rose-950 mb-2 flex items-center gap-2">
                             <i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes) - Toute la portée
                         </h3>
                         <div class="overflow-x-auto">
@@ -891,10 +891,21 @@
             let individualCard = document.getElementById('family-individual-card');
             let globalDoubleBanner = document.getElementById('family-global-double-banner');
 
+            // Textes des titres
+            let chartHeading = document.getElementById('family-chart-heading');
+            let chartSubheading = document.getElementById('family-chart-subheading');
+            let percentHeading = document.getElementById('family-percent-heading');
+            let gainHeading = document.getElementById('family-gain-heading');
+
             if (selectedVal === "all") {
                 individualCard.classList.add('hidden');
                 globalDoubleBanner.classList.remove('hidden');
                 updateFamilyGlobalDoubleSummary();
+
+                chartHeading.innerHTML = `<i class="fa-solid fa-chart-line text-rose-500"></i> Courbe comparative de toute la portée`;
+                chartSubheading.innerText = "Visualisez l'évolution de tous les frères et sœurs en même temps.";
+                percentHeading.innerHTML = `<i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier (%) - Toute la portée`;
+                gainHeading.innerHTML = `<i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes) - Toute la portée`;
 
                 litter.puppies.forEach((p, idx) => {
                     let data = litter.weights.map(w => w.values[idx] || null);
@@ -913,6 +924,12 @@
 
                 let pIdx = parseInt(selectedVal);
                 let puppy = litter.puppies[pIdx];
+                
+                chartHeading.innerHTML = `<i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de croissance exclusive de ${puppy.name}`;
+                chartSubheading.innerText = `Affichage de la courbe individuelle de ${puppy.name}.`;
+                percentHeading.innerHTML = `<i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier (%) - ${puppy.name}`;
+                gainHeading.innerHTML = `<i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes) - ${puppy.name}`;
+
                 document.getElementById('family-puppy-title').innerText = puppy.name;
                 let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
                 document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
@@ -955,16 +972,15 @@
                     notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
                 }
 
-                litter.puppies.forEach((p, idx) => {
-                    let data = litter.weights.map(w => w.values[idx] || null);
-                    datasets.push({
-                        label: p.name,
-                        data: data,
-                        borderColor: p.color,
-                        backgroundColor: p.color,
-                        borderWidth: idx === pIdx ? 4 : 2,
-                        tension: 0.2
-                    });
+                // UNIQUEMENT la courbe du chiot sélectionné
+                let data = litter.weights.map(w => w.values[pIdx] || null);
+                datasets.push({
+                    label: puppy.name,
+                    data: data,
+                    borderColor: puppy.color,
+                    backgroundColor: puppy.color,
+                    borderWidth: 4,
+                    tension: 0.2
                 });
             }
 
@@ -984,48 +1000,93 @@
 
         function renderFamilyCompleteTables() {
             let litter = getCurrentLitter();
+            let selectedVal = document.getElementById('family-puppy-select').value;
+            let isIndividual = selectedVal !== "all";
+            let pIdx = isIndividual ? parseInt(selectedVal) : null;
 
             let pTable = document.getElementById('family-percent-table');
-            pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
-                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
-                return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
-            }).join('');
-            let pTbody = pTable.querySelector('tbody');
-            pTbody.innerHTML = '';
-
-            for (let i = 1; i < litter.weights.length; i++) {
-                let tr = document.createElement('tr');
-                tr.className = "hover:bg-rose-50/50";
-                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
-                litter.puppies.forEach((p, pIdx) => {
-                    let prev = litter.weights[i-1].values[pIdx] || 0;
-                    let curr = litter.weights[i].values[pIdx] || 0;
-                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
-                    let colorClass = (pct !== null && pct < 3) ? "text-red-600 font-bold bg-red-50" : "text-rose-950";
-                    tr.innerHTML += `<td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
-                });
-                pTbody.appendChild(tr);
-            }
-
             let gTable = document.getElementById('family-gain-table');
-            gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
-                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
-                return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
-            }).join('');
-            let gTbody = gTable.querySelector('tbody');
-            gTbody.innerHTML = '';
 
-            for (let i = 1; i < litter.weights.length; i++) {
-                let tr = document.createElement('tr');
-                tr.className = "hover:bg-rose-50/50";
-                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
-                litter.puppies.forEach((p, pIdx) => {
+            if (isIndividual) {
+                let puppy = litter.puppies[pIdx];
+                let imgTag = puppy.photo ? `<img src="${puppy.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                
+                // En-têtes pour un seul chiot
+                pTable.querySelector('thead tr').innerHTML = `<th class="p-3 rounded-l-xl">Date</th><th class="p-3 text-center rounded-r-xl" style="color:${puppy.color};">${imgTag}${puppy.name} (% Évolution)</th>`;
+                gTable.querySelector('thead tr').innerHTML = `<th class="p-3 rounded-l-xl">Date</th><th class="p-3 text-center rounded-r-xl" style="color:${puppy.color};">${imgTag}${puppy.name} (Prise en g)</th>`;
+
+                let pTbody = pTable.querySelector('tbody');
+                let gTbody = gTable.querySelector('tbody');
+                pTbody.innerHTML = '';
+                gTbody.innerHTML = '';
+
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let dateFormatted = litter.weights[i].date.split('-').reverse().join('/');
                     let prev = litter.weights[i-1].values[pIdx] || 0;
                     let curr = litter.weights[i].values[pIdx] || 0;
+                    
+                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
                     let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
-                    tr.innerHTML += `<td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
-                });
-                gTbody.appendChild(tr);
+
+                    let colorClass = (pct !== null && pct < 3) ? "text-red-600 font-bold bg-red-50" : "text-rose-950";
+
+                    // Ligne Pourcentage
+                    let trP = document.createElement('tr');
+                    trP.className = "hover:bg-rose-50/50";
+                    trP.innerHTML = `<td class="p-3 font-semibold">${dateFormatted}</td><td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
+                    pTbody.appendChild(trP);
+
+                    // Ligne Gain
+                    let trG = document.createElement('tr');
+                    trG.className = "hover:bg-rose-50/50";
+                    trG.innerHTML = `<td class="p-3 font-semibold">${dateFormatted}</td><td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
+                    gTbody.appendChild(trG);
+                }
+
+            } else {
+                // Vue globale (toute la portée)
+                pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
+                    let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                    return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+                }).join('');
+                
+                let pTbody = pTable.querySelector('tbody');
+                pTbody.innerHTML = '';
+
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let tr = document.createElement('tr');
+                    tr.className = "hover:bg-rose-50/50";
+                    tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+                    litter.puppies.forEach((p, idx) => {
+                        let prev = litter.weights[i-1].values[idx] || 0;
+                        let curr = litter.weights[i].values[idx] || 0;
+                        let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
+                        let colorClass = (pct !== null && pct < 3) ? "text-red-600 font-bold bg-red-50" : "text-rose-950";
+                        tr.innerHTML += `<td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
+                    });
+                    pTbody.appendChild(tr);
+                }
+
+                gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
+                    let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                    return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+                }).join('');
+                
+                let gTbody = gTable.querySelector('tbody');
+                gTbody.innerHTML = '';
+
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let tr = document.createElement('tr');
+                    tr.className = "hover:bg-rose-50/50";
+                    tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+                    litter.puppies.forEach((p, idx) => {
+                        let prev = litter.weights[i-1].values[idx] || 0;
+                        let curr = litter.weights[i].values[idx] || 0;
+                        let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
+                        tr.innerHTML += `<td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
+                    });
+                    gTbody.appendChild(tr);
+                }
             }
         }
 
