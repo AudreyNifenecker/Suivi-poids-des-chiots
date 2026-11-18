@@ -19,7 +19,7 @@
     </style>
     <script>
         const SUPABASE_URL = 'https://gqydchjaqokbdegrhris.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeWRjaGphcW9rYmRlZ3JocmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkzMjk0NDEsImV4cCI6MjA0NDkwOTQ0MX0';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeWRjaGphcW9rYmRlZ3JocmlzIxincm9sZSI6ImFub24iLCJpYXQiOjE3MjkzMjk0NDEsImV4cCI6MjA0NDkwOTQ0MX0';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     </script>
 </head>
@@ -72,7 +72,7 @@
 
         <!-- TAB 1: SAISIE & POIDS -->
         <div id="tab-saisie" class="tab-content active space-y-6">
-            <!-- SÉLECTEUR RAPIDE DE PORTÉE DIRECTEMENT SUR L'ESPACE ÉLEVEUR -->
+            <!-- Sélecteur rapide de portée -->
             <div class="bg-white rounded-2xl shadow p-4 border border-rose-100 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div class="w-full md:w-1/2">
                     <label class="block text-xs font-bold text-rose-900 mb-1"><i class="fa-solid fa-filter mr-1 text-rose-500"></i> Choisir la portée active :</label>
@@ -186,7 +186,7 @@
                     <i class="fa-solid fa-shield-dog text-amber-600 text-xl"></i>
                     <div>
                         <h3 class="font-bold text-amber-900">Espace Famille - Le Fief des Petits Crunchis</h3>
-                        <p class="text-xs text-amber-700">Suivi personnalisé de votre chiot ou vue d'ensemble de la portée.</p>
+                        <p class="text-xs text-amber-700">Suivi personnalisé de votre chiot ou vue d'ensemble de la portée (Mise à jour auto).</p>
                     </div>
                 </div>
 
@@ -341,10 +341,15 @@
         let currentLitterId = litters[0].id;
         let activePuppyIndexForPhoto = null;
 
-        // Synchronisation Supabase (Cloud)
+        // Synchronisation Supabase (Cloud) avec contournement strict du cache mobile
         async function loadDataFromSupabase() {
             try {
-                const { data, error } = await supabaseClient.from('elevage_data').select('*').eq('id', 'main_data').single();
+                const { data, error } = await supabaseClient
+                    .from('elevage_data')
+                    .select('*')
+                    .eq('id', 'main_data')
+                    .single();
+                
                 if (data && data.content) {
                     litters = data.content;
                     if (!litters.find(l => l.id === currentLitterId) && litters.length > 0) {
@@ -1026,6 +1031,28 @@
             XLSX.utils.book_append_sheet(wb, ws, "Suivi Poids");
             XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_poids.xlsx`);
         }
+
+        // AUTO-ACTUALISATION INTELLIGENTE : Vérifie le cloud toutes les 10 secondes en arrière-plan
+        setInterval(async () => {
+            try {
+                const { data } = await supabaseClient.from('elevage_data').select('*').eq('id', 'main_data').single();
+                if (data && data.content) {
+                    let remoteString = JSON.stringify(data.content);
+                    let localString = JSON.stringify(litters);
+                    if (remoteString !== localString) {
+                        litters = data.content;
+                        localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
+                        if (document.getElementById('family-view-container').classList.contains('hidden')) {
+                            initApp();
+                        } else {
+                            updateFamilyLitterSelect();
+                        }
+                    }
+                }
+            } catch (e) {
+                // Silencieux si pas de réseau
+            }
+        }, 10000);
 
         window.addEventListener('DOMContentLoaded', async () => {
             await loadDataFromSupabase();
