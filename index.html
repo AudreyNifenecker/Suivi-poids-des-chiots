@@ -197,6 +197,7 @@
             </div>
 
             <div class="bg-white rounded-2xl shadow p-6 border border-rose-100 space-y-6">
+                <!-- SÉLECTEUR DE PORTÉE DANS LA VUE FAMILLE -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-rose-50/50 p-4 rounded-2xl border border-rose-100">
                     <div>
                         <label class="block text-xs font-bold text-rose-900 mb-1">1. Choisir la portée :</label>
@@ -319,7 +320,7 @@
     <input type="file" id="quick-photo-input" accept="image/*" class="hidden" onchange="handleQuickPhotoUpload(this)">
 
     <script>
-        let litters = JSON.parse(localStorage.getItem('crunchis_all_litters')) || [
+        let litters = [
             {
                 id: "litter-1",
                 name: "Portée Utopia 2026",
@@ -340,7 +341,7 @@
         let currentLitterId = litters[0].id;
         let activePuppyIndexForPhoto = null;
 
-        // Synchronisation Supabase (Cloud) avec contournement strict du cache mobile
+        // Synchronisation Cloud Supabase prioritaire
         async function loadDataFromSupabase() {
             try {
                 const { data, error } = await supabaseClient
@@ -357,7 +358,8 @@
                     localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
                 }
             } catch (err) {
-                console.log("Mode local actif");
+                let local = localStorage.getItem('crunchis_all_litters');
+                if (local) litters = JSON.parse(local);
             }
         }
 
@@ -435,6 +437,7 @@
         }
 
         async function openFamilyPortal() {
+            await loadDataFromSupabase();
             document.getElementById('admin-nav').classList.add('hidden');
             document.querySelector('header button[onclick="openNewLitterModal()"]').classList.add('hidden');
             document.querySelector('header button[onclick="exportToExcel()"]').classList.add('hidden');
@@ -448,7 +451,6 @@
                 document.getElementById('return-admin-btn').classList.remove('hidden');
             }
 
-            await loadDataFromSupabase();
             updateFamilyLitterSelect();
         }
 
@@ -1031,7 +1033,7 @@
             XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_poids.xlsx`);
         }
 
-        // AUTO-ACTUALISATION INTELLIGENTE (Toutes les 10 secondes)
+        // Auto-actualisation en direct (Toutes les 5 secondes)
         setInterval(async () => {
             try {
                 const { data } = await supabaseClient.from('elevage_data').select('*').eq('id', 'main_data').single();
@@ -1040,7 +1042,11 @@
                     let localString = JSON.stringify(litters);
                     if (remoteString !== localString) {
                         litters = data.content;
+                        if (!litters.find(l => l.id === currentLitterId) && litters.length > 0) {
+                            currentLitterId = litters[0].id;
+                        }
                         localStorage.setItem('crunchis_all_litters', JSON.stringify(litters));
+                        
                         if (document.getElementById('family-view-container').classList.contains('hidden')) {
                             initApp();
                         } else {
@@ -1049,13 +1055,17 @@
                     }
                 }
             } catch (e) {}
-        }, 10000);
+        }, 5000);
+
+        // Correctif anti-cache Chrome mobile (`pageshow`)
+        window.addEventListener('pageshow', async function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
 
         window.addEventListener('DOMContentLoaded', async () => {
             await loadDataFromSupabase();
-            
-            // Si le lien contient #famille OU si on veut que l'espace famille s'ouvre d'office sur le mobile, 
-            // cette ligne détecte l'ancre ou force la vue famille si l'écran est un mobile :
             if (window.location.hash === '#famille') {
                 openFamilyPortal();
             } else {
