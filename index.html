@@ -48,6 +48,9 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-3">
+                <button onclick="manualSaveToCloud()" id="cloud-save-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Enregistrer sur le cloud
+                </button>
                 <button onclick="openFamilyPortal()" class="bg-stone-600 hover:bg-stone-700 text-white font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-2 text-sm">
                     <i class="fa-solid fa-eye"></i> Vue Familles
                 </button>
@@ -209,7 +212,7 @@
                     <i class="fa-solid fa-shield-dog text-amber-600 text-xl"></i>
                     <div>
                         <h3 class="font-bold text-amber-900">Espace Famille - Le Fief des Petits Crunchis</h3>
-                        <p class="text-xs text-amber-700">Suivi global de la portée ou de votre chiot (Mise à jour auto).</p>
+                        <p class="text-xs text-amber-700">Suivi global de la portée ou de votre chiot.</p>
                     </div>
                 </div>
 
@@ -553,50 +556,46 @@
             renderHeaderLogo();
         }
 
-        async function saveDataToSupabase() {
+        // Sauvegarde locale instantanée (dans le navigateur)
+        function saveAllLitters() {
+            localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
+        }
+
+        // Sauvegarde manuelle sur le cloud déclenchée par le bouton
+        async function manualSaveToCloud() {
+            let btn = document.getElementById('cloud-save-btn');
+            let originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement...`;
+            btn.disabled = true;
+
             try {
+                // Sauvegarde locale d'abord
+                saveAllLitters();
+
                 const { error } = await supabaseClient
                     .from('portees')
                     .update({ content: appData })
                     .eq('id', 'main_data');
+
+                if (error) throw error;
                 
-                if (error) {
-                    console.error("Erreur de sauvegarde Supabase :", error.message);
-                }
+                btn.innerHTML = `<i class="fa-solid fa-check"><i> Sauvegardé !`;
+                btn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
+                btn.classList.add('bg-emerald-600');
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('bg-emerald-600');
+                    btn.classList.add('bg-sky-600', 'hover:bg-sky-700');
+                    btn.disabled = false;
+                }, 2000);
+
             } catch (err) {
-                console.error("Erreur de synchronisation cloud :", err);
+                console.error("Erreur cloud :", err);
+                alert("Erreur lors de l'enregistrement sur le cloud : " + (err.message || "Vérifiez votre connexion internet"));
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
             }
-        }
-
-        let saveTimeout = null;
-        let isSaving = false;
-
-        function saveAllLitters() {
-            // 1. Sauvegarde locale immédiate (jamais de perte de données)
-            localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
-
-            // 2. Annulation du timer précédent pour éviter les requêtes en rafale
-            clearTimeout(saveTimeout);
-
-            // 3. Temporisation (2 secondes) pour laisser le temps de finir la saisie
-            saveTimeout = setTimeout(async () => {
-                isSaving = true;
-                try {
-                    const { error } = await supabaseClient
-                        .from('portees')
-                        .update({ content: appData })
-                        .eq('id', 'main_data')
-                        .select(); // force l'attente du retour de la requête
-
-                    if (error) throw error;
-                    console.log("Sauvegarde cloud réussie !");
-                } catch (err) {
-                    console.error("Erreur de sauvegarde :", err);
-                    // On n'affiche plus l'alerte bloquante pour ne pas perturber la saisie rapide
-                } finally {
-                    isSaving = false;
-                }
-            }, 2000);
         }
 
         let familyChartInstance = null;
@@ -751,6 +750,7 @@
             document.getElementById('admin-nav').classList.add('hidden');
             document.querySelector('header button[onclick="openNewLitterModal()"]').classList.add('hidden');
             document.querySelector('header button[onclick="exportToExcel()"]').classList.add('hidden');
+            document.getElementById('cloud-save-btn').classList.add('hidden');
 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('family-view-container').classList.remove('hidden');
@@ -798,6 +798,7 @@
             document.getElementById('admin-nav').classList.remove('hidden');
             document.querySelector('header button[onclick="openNewLitterModal()"]').classList.remove('hidden');
             document.querySelector('header button[onclick="exportToExcel()"]').classList.remove('hidden');
+            document.getElementById('cloud-save-btn').classList.remove('hidden');
 
             switchTab('saisie');
             initApp();
@@ -1704,36 +1705,6 @@
             XLSX.utils.book_append_sheet(wb, ws, "Suivi Poids & Notes");
             XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_suivi.xlsx`);
         }
-
-        setInterval(async () => {
-            if (isSaving) return;
-            try {
-                const { data } = await supabaseClient.from('portees').select('*').eq('id', 'main_data').single();
-                if (data && data.content) {
-                    let remoteString = JSON.stringify(data.content);
-                    let localString = JSON.stringify(appData);
-                    if (remoteString !== localString) {
-                        if (Array.isArray(data.content)) {
-                            appData.litters = data.content;
-                        } else if (data.content.litters) {
-                            appData = data.content;
-                        }
-                        let list = getLitters();
-                        if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
-                            currentLitterId = list[0].id;
-                        }
-                        localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
-                        
-                        renderHeaderLogo();
-                        if (document.getElementById('family-view-container').classList.contains('hidden')) {
-                            initApp();
-                        } else {
-                            updateFamilyLitterSelect();
-                        }
-                    }
-                }
-            } catch (e) {}
-        }, 5000);
 
         window.addEventListener('pageshow', async function(event) {
             if (event.persisted) {
