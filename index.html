@@ -205,7 +205,7 @@
                     <i class="fa-solid fa-shield-dog text-amber-600 text-xl"></i>
                     <div>
                         <h3 class="font-bold text-amber-900">Espace Famille - Le Fief des Petits Crunchis</h3>
-                        <p class="text-xs text-amber-700">Suivi global de la portée et de votre chiot (Mise à jour auto).</p>
+                        <p class="text-xs text-amber-700">Suivi global de la portée ou de votre chiot (Mise à jour auto).</p>
                     </div>
                 </div>
 
@@ -224,14 +224,14 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-rose-900 mb-1">2. Fiche individuelle de votre chiot (pour impression PDF) :</label>
+                        <label class="block text-xs font-bold text-rose-900 mb-1">2. Vue d'ensemble ou Chiot en particulier :</label>
                         <select id="family-puppy-select" onchange="renderFamilyView()" class="w-full border border-rose-200 rounded-xl px-4 py-2 text-sm font-semibold bg-white outline-none focus:ring-2 focus:ring-rose-400">
                         </select>
                     </div>
                 </div>
 
-                <!-- CARTE CHIOT SÉLECTIONNÉ & BOUTON IMPRESSION -->
-                <div class="space-y-4 bg-rose-50/40 p-5 rounded-2xl border border-rose-100">
+                <!-- CARTE CHIOT SÉLECTIONNÉ & BOUTON IMPRESSION (MASQUÉ EN VUE GLOBALE) -->
+                <div id="family-individual-card" class="space-y-4 bg-rose-50/40 p-5 rounded-2xl border border-rose-100">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                         <div class="flex items-center gap-3">
                             <div id="family-puppy-photo-container"></div>
@@ -745,6 +745,9 @@
             const select = document.getElementById('family-puppy-select');
             select.innerHTML = '';
             
+            // OPTION PORTÉE COMPLÈTE EN PREMIER CHOIX
+            select.innerHTML += `<option value="all">🐾 Vue globale de toute la portée</option>`;
+
             litter.puppies.forEach((p, idx) => {
                 let icon = p.sex === 'Mâle' ? '♂' : '♀';
                 select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})</option>`;
@@ -806,65 +809,84 @@
 
             let datasets = [];
             let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
-            let famDoubleContainer = document.getElementById('fam-double-weight');
-            let photoContainer = document.getElementById('family-puppy-photo-container');
+            let individualCard = document.getElementById('family-individual-card');
 
-            let pIdx = parseInt(selectedVal);
-            let puppy = litter.puppies[pIdx];
-            document.getElementById('family-puppy-title').innerText = puppy.name;
-            let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
-            document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
+            if (selectedVal === "all") {
+                // VUE GLOBALE DE TOUTE LA PORTÉE
+                individualCard.classList.add('hidden');
 
-            if (puppy.photo) {
-                photoContainer.innerHTML = `<img src="${puppy.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-rose-300 shadow-sm">`;
-            } else {
-                photoContainer.innerHTML = `<div class="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center text-rose-400 border border-rose-200"><i class="fa-solid fa-dog text-xl"></i></div>`;
-            }
-
-            let birthW = litter.weights.length > 0 ? (litter.weights[0].values[pIdx] || '-') : '-';
-            let latestW = litter.weights.length > 0 ? (litter.weights[litter.weights.length - 1].values[pIdx] || '-') : '-';
-            let gain = (birthW !== '-' && latestW !== '-') ? (latestW - birthW) : '-';
-
-            document.getElementById('fam-birth-weight').innerText = birthW + " g";
-            document.getElementById('fam-latest-weight').innerText = latestW + " g";
-            document.getElementById('fam-total-gain').innerText = (gain > 0 ? "+" : "") + gain + " g";
-
-            let doubleDateStr = calculateDoubleWeight(litter, pIdx);
-            famDoubleContainer.innerHTML = `<div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppy.color};">${puppy.name}</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>`;
-
-            // NOTES DU CHIOT SÉLECTIONNÉ
-            let notesContainer = document.getElementById('family-notes-list');
-            notesContainer.innerHTML = '';
-            let hasNotes = false;
-            litter.weights.forEach(w => {
-                let noteText = w.notes && w.notes[pIdx] ? w.notes[pIdx].trim() : "";
-                if (noteText !== "") {
-                    hasNotes = true;
-                    let dateFormatted = w.date.split('-').reverse().join('/');
-                    notesContainer.innerHTML += `
-                        <div class="flex items-start gap-2 bg-rose-50/40 p-2 rounded-lg border border-rose-100">
-                            <span class="font-bold text-rose-950 whitespace-nowrap"><i class="fa-solid fa-calendar-day mr-1 text-rose-400"></i>${dateFormatted} :</span>
-                            <span class="text-rose-800 italic">${noteText}</span>
-                        </div>
-                    `;
-                }
-            });
-            if (!hasNotes) {
-                notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
-            }
-
-            // COURBE COMPARATIVE DE TOUTE LA PORTÉE
-            litter.puppies.forEach((p, idx) => {
-                let data = litter.weights.map(w => w.values[idx] || null);
-                datasets.push({
-                    label: p.name,
-                    data: data,
-                    borderColor: p.color,
-                    backgroundColor: p.color,
-                    borderWidth: idx === pIdx ? 4 : 2,
-                    tension: 0.2
+                litter.puppies.forEach((p, idx) => {
+                    let data = litter.weights.map(w => w.values[idx] || null);
+                    datasets.push({
+                        label: p.name,
+                        data: data,
+                        borderColor: p.color,
+                        backgroundColor: p.color,
+                        borderWidth: 3,
+                        tension: 0.2
+                    });
                 });
-            });
+            } else {
+                // VUE INDIVIDUELLE D'UN CHIOT
+                individualCard.classList.remove('hidden');
+                let pIdx = parseInt(selectedVal);
+                let puppy = litter.puppies[pIdx];
+                document.getElementById('family-puppy-title').innerText = puppy.name;
+                let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
+                document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
+
+                let photoContainer = document.getElementById('family-puppy-photo-container');
+                if (puppy.photo) {
+                    photoContainer.innerHTML = `<img src="${puppy.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-rose-300 shadow-sm">`;
+                } else {
+                    photoContainer.innerHTML = `<div class="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center text-rose-400 border border-rose-200"><i class="fa-solid fa-dog text-xl"></i></div>`;
+                }
+
+                let birthW = litter.weights.length > 0 ? (litter.weights[0].values[pIdx] || '-') : '-';
+                let latestW = litter.weights.length > 0 ? (litter.weights[litter.weights.length - 1].values[pIdx] || '-') : '-';
+                let gain = (birthW !== '-' && latestW !== '-') ? (latestW - birthW) : '-';
+
+                document.getElementById('fam-birth-weight').innerText = birthW + " g";
+                document.getElementById('fam-latest-weight').innerText = latestW + " g";
+                document.getElementById('fam-total-gain').innerText = (gain > 0 ? "+" : "") + gain + " g";
+
+                let doubleDateStr = calculateDoubleWeight(litter, pIdx);
+                document.getElementById('fam-double-weight').innerHTML = `<div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppy.color};">${puppy.name}</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>`;
+
+                // NOTES DU CHIOT SÉLECTIONNÉ
+                let notesContainer = document.getElementById('family-notes-list');
+                notesContainer.innerHTML = '';
+                let hasNotes = false;
+                litter.weights.forEach(w => {
+                    let noteText = w.notes && w.notes[pIdx] ? w.notes[pIdx].trim() : "";
+                    if (noteText !== "") {
+                        hasNotes = true;
+                        let dateFormatted = w.date.split('-').reverse().join('/');
+                        notesContainer.innerHTML += `
+                            <div class="flex items-start gap-2 bg-rose-50/40 p-2 rounded-lg border border-rose-100">
+                                <span class="font-bold text-rose-950 whitespace-nowrap"><i class="fa-solid fa-calendar-day mr-1 text-rose-400"></i>${dateFormatted} :</span>
+                                <span class="text-rose-800 italic">${noteText}</span>
+                            </div>
+                        `;
+                    }
+                });
+                if (!hasNotes) {
+                    notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
+                }
+
+                // COURBE COMPARATIVE AVEC MISE EN ÉVIDENCE DU CHIOT SÉLECTIONNÉ
+                litter.puppies.forEach((p, idx) => {
+                    let data = litter.weights.map(w => w.values[idx] || null);
+                    datasets.push({
+                        label: p.name,
+                        data: data,
+                        borderColor: p.color,
+                        backgroundColor: p.color,
+                        borderWidth: idx === pIdx ? 4 : 2,
+                        tension: 0.2
+                    });
+                });
+            }
 
             familyChartInstance = new Chart(canvasCtx, {
                 type: 'line',
@@ -932,6 +954,10 @@
         function openPrintableFiche() {
             let litter = getCurrentLitter();
             let selectedVal = document.getElementById('family-puppy-select').value;
+            if (selectedVal === "all") {
+                alert("Veuillez d'abord sélectionner un chiot spécifique dans le menu déroulant pour imprimer sa fiche.");
+                return;
+            }
             let pIdx = parseInt(selectedVal);
             let puppy = litter.puppies[pIdx];
 
