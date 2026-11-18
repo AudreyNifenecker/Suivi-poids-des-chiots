@@ -1129,8 +1129,8 @@
                     let currentNote = wRow.notes && wRow.notes[pIdx] !== undefined ? wRow.notes[pIdx] : '';
                     tdVal.innerHTML = `
                         <div class="flex flex-col gap-1.5">
-                            <input type="number" value="${currentVal}" placeholder="Poids g" onchange="updateWeightVal(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
-                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" onchange="updatePuppyNote(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
+                            <input type="number" value="${currentVal}" placeholder="Poids g" oninput="updateWeightValLive(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
+                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" oninput="updatePuppyNoteLive(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
                         </div>
                     `;
                     tr.appendChild(tdVal);
@@ -1178,7 +1178,7 @@
             updateWeightAlertBanner();
         }
 
-        function updateWeightVal(wIdx, pIdx, val) {
+        function updateWeightValLive(wIdx, pIdx, val) {
             let litter = getCurrentLitter();
             litter.weights[wIdx].values[pIdx] = val === '' ? 0 : parseFloat(val);
             saveAllLitters();
@@ -1188,7 +1188,7 @@
             renderGainTable();
         }
 
-        function updatePuppyNote(wIdx, pIdx, val) {
+        function updatePuppyNoteLive(wIdx, pIdx, val) {
             let litter = getCurrentLitter();
             if (!litter.weights[wIdx].notes) {
                 litter.weights[wIdx].notes = litter.puppies.map(() => "");
