@@ -592,16 +592,6 @@
                 let firstRow = l.weights[0];
                 let secondRow = l.weights.length > 1 ? l.weights[1] : null;
 
-                let is24hStep = false;
-                if (secondRow && firstRow.date && secondRow.date) {
-                    let d0 = new Date(firstRow.date);
-                    let d1 = new Date(secondRow.date);
-                    let diffDays01 = Math.round((d1 - d0) / (1000 * 60 * 60 * 24));
-                    if (diffDays01 === 1) {
-                        is24hStep = true;
-                    }
-                }
-
                 l.puppies.forEach((p, pIdx) => {
                     let birthW = firstRow.values[pIdx] || 0;
                     if (birthW > 0) {
@@ -619,17 +609,15 @@
                                     pct: parseFloat(pctFirstDay.toFixed(1))
                                 });
 
-                                if (is24hStep) {
-                                    let gain24h = nextW - birthW;
-                                    if (gain24h > 0) {
-                                        allFirst24hGain.push({
-                                            litterId: l.id,
-                                            pIdx: pIdx,
-                                            name: p.name,
-                                            sex: p.sex,
-                                            gain: gain24h
-                                        });
-                                    }
+                                let gainFirstStep = nextW - birthW;
+                                if (gainFirstStep > 0) {
+                                    allFirst24hGain.push({
+                                        litterId: l.id,
+                                        pIdx: pIdx,
+                                        name: p.name,
+                                        sex: p.sex,
+                                        gain: gainFirstStep
+                                    });
                                 }
                             }
                         }
@@ -1160,12 +1148,12 @@
                 let isLight = puppy.sex === 'Femelle';
                 let rosetteText = "";
 
-                if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
+                if (globalExtremes.maxFirst24hGain && globalExtremes.maxFirst24hGain.litterId === litter.id && globalExtremes.maxFirst24hGain.pIdx === pIdx) {
+                    rosetteText = `Record 1res 24h (+${globalExtremes.maxFirst24hGain.gain}g)`;
+                } else if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
                     rosetteText = "Poids le plus léger à la naissance";
                 } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
                     rosetteText = "Poids le plus lourd à la naissance";
-                } else if (globalExtremes.maxFirst24hGain && globalExtremes.maxFirst24hGain.litterId === litter.id && globalExtremes.maxFirst24hGain.pIdx === pIdx) {
-                    rosetteText = `Record 24h (+${globalExtremes.maxFirst24hGain.gain}g)`;
                 } else if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === pIdx) {
                     rosetteText = `Record gain 24h (+${globalExtremes.maxGain.val}g)`;
                 } else if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === pIdx) {
