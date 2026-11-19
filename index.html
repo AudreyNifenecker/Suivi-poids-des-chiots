@@ -679,4 +679,1421 @@
                 let val = w.values[pIdx];
                 if (val && val >= doubleTarget) {
                     let wTime = new Date(w.date).getTime();
-                    let diffDays = Math
+                    let diffDays = Math.round((wTime - birthTime) / (1000 * 60 * 60 * 24));
+                    return `${w.date.split('-').reverse().join('/')} (J+${diffDays})`;
+                }
+            }
+            return "Non atteint";
+        }
+
+        function calculateTripleWeight(litter, pIdx) {
+            if (litter.weights.length === 0 || !litter.birthDate) return "Non atteint";
+            let birthW = litter.weights[0].values[pIdx];
+            if (!birthW || birthW <= 0) return "Non atteint";
+
+            let tripleTarget = birthW * 3;
+            let birthTime = new Date(litter.birthDate).getTime();
+
+            for (let w of litter.weights) {
+                let val = w.values[pIdx];
+                if (val && val >= tripleTarget) {
+                    let wTime = new Date(w.date).getTime();
+                    let diffDays = Math.round((wTime - birthTime) / (1000 * 60 * 60 * 24));
+                    return `${w.date.split('-').reverse().join('/')} (J+${diffDays})`;
+                }
+            }
+            return "Non atteint";
+        }
+
+        function compressImage(file, maxWidth = 300, quality = 0.7) {
+            return new Promise((resolve) => {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    let img = new Image();
+                    img.onload = function () {
+                        let canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        let ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressedDataUrl);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function loadDataFromSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('portees')
+                    .select('*')
+                    .eq('id', 'main_data')
+                    .single();
+                
+                if (data && data.content) {
+                    if (Array.isArray(data.content)) {
+                        appData.litters = data.content;
+                    } else if (data.content.litters) {
+                        appData = data.content;
+                    }
+                    appData.litters.forEach(l => {
+                        if (l.weights) {
+                            l.weights.forEach(w => {
+                                if (!w.notes && w.note) {
+                                    w.notes = l.puppies.map(() => w.note);
+                                } else if (!w.notes) {
+                                    w.notes = l.puppies.map(() => "");
+                                }
+                            });
+                        }
+                    });
+                    let list = getLitters();
+                    if (!list.find(l => l.id === currentLitterId) && list.length > 0) {
+                        currentLitterId = list[0].id;
+                    }
+                    localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
+                }
+            } catch (err) {
+                let local = localStorage.getItem('crunchis_all_data') || localStorage.getItem('crunchis_all_litters');
+                if (local) {
+                    let parsed = JSON.parse(local);
+                    if (Array.isArray(parsed)) {
+                        appData.litters = parsed;
+                    } else {
+                        appData = parsed;
+                    }
+                }
+            }
+            renderHeaderLogo();
+        }
+
+        function saveAllLitters() {
+            localStorage.setItem('crunchis_all_data', JSON.stringify(appData));
+        }
+
+        async function manualSaveToCloud() {
+            let btn = document.getElementById('cloud-save-btn');
+            let originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement...`;
+            btn.disabled = true;
+
+            try {
+                saveAllLitters();
+
+                const { error } = await supabaseClient
+                    .from('portees')
+                    .update({ content: appData })
+                    .eq('id', 'main_data');
+
+                if (error) throw error;
+                
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Sauvegardé !`;
+                btn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
+                btn.classList.add('bg-emerald-600');
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('bg-emerald-600');
+                    btn.classList.add('bg-sky-600', 'hover:bg-sky-700');
+                    btn.disabled = false;
+                }, 2000);
+
+            } catch (err) {
+                console.error("Erreur cloud :", err);
+                alert("Erreur lors de l'enregistrement sur le cloud : " + (err.message || "Vérifiez votre connexion internet"));
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        }
+
+        let familyChartInstance = null;
+        let growthChartInstance = null;
+        let gainBarChartInstance = null;
+        let percentBarChartInstance = null;
+
+        const defaultColors = ['#e11d48', '#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0284c7', '#65a30d', '#ea580c', '#4f46e5'];
+
+        function renderHeaderLogo() {
+            let container = document.getElementById('header-logo-container');
+            if (!container) return;
+            if (appData.headerPhoto) {
+                container.innerHTML = `<img src="${appData.headerPhoto}" class="w-14 h-14 rounded-full object-cover border-2 border-rose-300 shadow-md">`;
+            } else {
+                container.innerHTML = `<div class="w-14 h-14 rounded-full bg-rose-200/70 flex items-center justify-center text-rose-600 border border-rose-300 shadow-sm"><i class="fa-solid fa-dog text-2xl"></i></div>`;
+            }
+        }
+
+        function triggerHeaderPhotoChange() {
+            document.getElementById('header-photo-input').value = "";
+            document.getElementById('header-photo-input').click();
+        }
+
+        async function handleHeaderPhotoUpload(input) {
+            if (input.files && input.files[0]) {
+                let compressed = await compressImage(input.files[0], 200, 0.7);
+                appData.headerPhoto = compressed;
+                saveAllLitters();
+                renderHeaderLogo();
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-rose-400', 'text-white', 'shadow');
+                el.classList.add('bg-rose-50/50', 'text-rose-800');
+            });
+            document.getElementById('tab-' + tabId).classList.add('active');
+            const btn = document.getElementById('btn-tab-' + tabId);
+            if (btn) {
+                btn.classList.remove('bg-rose-50/50', 'text-rose-800');
+                btn.classList.add('bg-rose-400', 'text-white', 'shadow');
+            }
+
+            setTimeout(() => {
+                if (tabId === 'courbe') updateCharts();
+                if (tabId === 'histogramme') updateBarCharts();
+            }, 50);
+
+            if (tabId === 'archives') renderAllLittersList();
+        }
+
+        function initApp() {
+            let litter = getCurrentLitter();
+            if (!litter) return;
+            document.getElementById('litter-main-title').innerHTML = `<i class="fa-solid fa-calendar-plus text-rose-500"></i> ${litter.name} - Pesées journalières & Notes par chiot`;
+            let formattedDate = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
+            document.getElementById('litter-info-details').innerText = `Date de naissance : ${formattedDate} | Chiots : ${litter.puppies.length}`;
+            
+            renderHeaderLogo();
+            updateAdminLitterSelect();
+            renderWeightsTable();
+            updateWeightAlertBanner();
+            renderPercentTable();
+            renderGainTable();
+            updateCharts();
+            updateBarCharts();
+        }
+
+        function updateWeightAlertBanner() {
+            let litter = getCurrentLitter();
+            let banner = document.getElementById('weight-alert-banner');
+            if (!banner) return;
+
+            if (!litter.weights || litter.weights.length < 2) {
+                banner.classList.add('hidden');
+                return;
+            }
+
+            let lastIdx = litter.weights.length - 1;
+            let currRow = litter.weights[lastIdx];
+            let prevRow = litter.weights[litter.weights.length - 2];
+
+            let alerts = [];
+
+            litter.puppies.forEach((p, pIdx) => {
+                let prevVal = prevRow.values[pIdx] || 0;
+                let currVal = currRow.values[pIdx] || 0;
+
+                if (prevVal > 0 && currVal > 0) {
+                    let diff = currVal - prevVal;
+                    let pct = ((diff / prevVal) * 100);
+                    if (pct < 3) {
+                        alerts.push({
+                            name: p.name,
+                            color: p.color || '#e11d48',
+                            pct: pct.toFixed(1),
+                            diff: diff
+                        });
+                    }
+                }
+            });
+
+            if (alerts.length > 0) {
+                let listHtml = alerts.map(a => `<span class="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-red-200 font-bold" style="color: ${a.color};">${a.name} (${a.diff > 0 ? '+' : ''}${a.diff}g / ${a.pct}%)</span>`).join(' ');
+                
+                banner.className = "rounded-2xl p-4 border shadow-sm bg-red-50 border-red-200 text-red-950 flex items-start gap-3";
+                banner.innerHTML = `
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl mt-0.5"></i>
+                    <div>
+                        <h4 class="font-bold text-sm text-red-900">Attention - Surveillance requise sur la dernière pesée (${currRow.date.split('-').reverse().join('/')}) :</h4>
+                        <p class="text-xs text-red-700 mt-0.5">Les chiots suivants ont une évolution inférieure à 3% ou une baisse :</p>
+                        <div class="flex flex-wrap gap-2 mt-2 text-xs">${listHtml}</div>
+                    </div>
+                `;
+                banner.classList.remove('hidden');
+            } else {
+                banner.className = "rounded-2xl p-4 border shadow-sm bg-emerald-50 border-emerald-200 text-emerald-950 flex items-center gap-3";
+                banner.innerHTML = `
+                    <i class="fa-solid fa-circle-check text-emerald-600 text-xl"></i>
+                    <div>
+                        <h4 class="font-bold text-xs text-emerald-900">Tout va bien !</h4>
+                        <p class="text-xs text-emerald-700">Tous les chiots ont une prise de poids normale (≥ 3%) lors de la dernière pesée.</p>
+                    </div>
+                `;
+                banner.classList.remove('hidden');
+            }
+        }
+
+        function updateAdminLitterSelect() {
+            const select = document.getElementById('admin-litter-select');
+            if (!select) return;
+            select.innerHTML = '';
+            let list = getLitters();
+            list.forEach(l => {
+                select.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>🐾 ${l.name} (${l.puppies.length} chiots)</option>`;
+            });
+        }
+
+        function onAdminLitterChange() {
+            currentLitterId = document.getElementById('admin-litter-select').value;
+            initApp();
+        }
+
+        async function openFamilyPortal() {
+            await loadDataFromSupabase();
+            document.getElementById('admin-nav').classList.add('hidden');
+            document.querySelector('header button[onclick="openNewLitterModal()"]').classList.add('hidden');
+            document.querySelector('header button[onclick="exportToExcel()"]').classList.add('hidden');
+            document.getElementById('cloud-save-btn').classList.add('hidden');
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('family-view-container').classList.remove('hidden');
+
+            if (window.location.hash === '#famille') {
+                document.getElementById('return-admin-btn').classList.add('hidden');
+            } else {
+                document.getElementById('return-admin-btn').classList.remove('hidden');
+            }
+
+            updateFamilyLitterSelect();
+        }
+
+        function updateFamilyLitterSelect() {
+            const litterSelect = document.getElementById('family-litter-select');
+            litterSelect.innerHTML = '';
+            let list = getLitters();
+            list.forEach(l => {
+                litterSelect.innerHTML += `<option value="${l.id}" ${l.id === currentLitterId ? 'selected' : ''}>${l.name}</option>`;
+            });
+            updateFamilyPuppySelect();
+        }
+
+        function onFamilyLitterChange() {
+            currentLitterId = document.getElementById('family-litter-select').value;
+            updateFamilyPuppySelect();
+        }
+
+        function updateFamilyPuppySelect() {
+            let litter = getCurrentLitter();
+            const select = document.getElementById('family-puppy-select');
+            select.innerHTML = '';
+            
+            select.innerHTML += `<option value="all">🐾 Vue globale de toute la portée</option>`;
+
+            let globalExtremes = getGlobalElevageExtremes();
+
+            litter.puppies.forEach((p, idx) => {
+                let icon = p.sex === 'Mâle' ? '♂' : '♀';
+                let iconsTag = "";
+                
+                if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === idx) {
+                    iconsTag += ' 🪶';
+                }
+                if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === idx) {
+                    iconsTag += ' 🛡️';
+                }
+                if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === idx) {
+                    iconsTag += ' ⚡';
+                }
+                if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === idx) {
+                    iconsTag += ' 🏅';
+                }
+                if (globalExtremes.firstTriple && globalExtremes.firstTriple.litterId === litter.id && globalExtremes.firstTriple.pIdx === idx) {
+                    iconsTag += ' 🏆';
+                }
+
+                select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})${iconsTag}</option>`;
+            });
+            renderFamilyView();
+        }
+
+        function exitFamilyPortal() {
+            document.getElementById('family-view-container').classList.add('hidden');
+            document.getElementById('admin-nav').classList.remove('hidden');
+            document.querySelector('header button[onclick="openNewLitterModal()"]').classList.remove('hidden');
+            document.querySelector('header button[onclick="exportToExcel()"]').classList.remove('hidden');
+            document.getElementById('cloud-save-btn').classList.remove('hidden');
+
+            switchTab('saisie');
+            initApp();
+        }
+
+        function updateAdminChartDoubleSummary() {
+            let litter = getCurrentLitter();
+            let container = document.getElementById('admin-chart-double-summary');
+            if (!container) return;
+            container.innerHTML = '';
+
+            litter.puppies.forEach((p, pIdx) => {
+                let resDouble = calculateDoubleWeight(litter, pIdx);
+                let resTriple = calculateTripleWeight(litter, pIdx);
+                container.innerHTML += `
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
+                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : x2: <span class="text-rose-950 font-semibold">${resDouble}</span> | x3: <span class="text-rose-950 font-semibold">${resTriple}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function updateFamilyGlobalDoubleSummary() {
+            let litter = getCurrentLitter();
+            let container = document.getElementById('family-global-double-summary');
+            if (!container) return;
+            container.innerHTML = '';
+
+            litter.puppies.forEach((p, pIdx) => {
+                let resDouble = calculateDoubleWeight(litter, pIdx);
+                let resTriple = calculateTripleWeight(litter, pIdx);
+                container.innerHTML += `
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
+                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : x2: <span class="text-rose-950 font-semibold">${resDouble}</span> | x3: <span class="text-rose-950 font-semibold">${resTriple}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderFamilyView() {
+            let litter = getCurrentLitter();
+            let selectedVal = document.getElementById('family-puppy-select').value;
+            let canvasCtx = document.getElementById('familyGrowthChart').getContext('2d');
+
+            if (familyChartInstance) familyChartInstance.destroy();
+
+            let datasets = [];
+            let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
+            let individualCard = document.getElementById('family-individual-card');
+            let globalDoubleBanner = document.getElementById('family-global-double-banner');
+            let ageBanner = document.getElementById('puppy-age-banner');
+
+            let chartHeading = document.getElementById('family-chart-heading');
+            let chartSubheading = document.getElementById('family-chart-subheading');
+            let percentHeading = document.getElementById('family-percent-heading');
+            let gainHeading = document.getElementById('family-gain-heading');
+
+            if (selectedVal === "all") {
+                individualCard.classList.add('hidden');
+                globalDoubleBanner.classList.remove('hidden');
+                updateFamilyGlobalDoubleSummary();
+
+                chartHeading.innerHTML = `<i class="fa-solid fa-chart-line text-rose-500"></i> Courbe comparative de toute la portée`;
+                chartSubheading.innerText = "Visualisez l'évolution de tous les frères et sœurs en même temps.";
+                percentHeading.innerHTML = `<i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier (%) - Toute la portée`;
+                gainHeading.innerHTML = `<i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes) - Toute la portée`;
+
+                litter.puppies.forEach((p, idx) => {
+                    let data = litter.weights.map(w => w.values[idx] || null);
+                    datasets.push({
+                        label: p.name,
+                        data: data,
+                        borderColor: p.color,
+                        backgroundColor: p.color,
+                        borderWidth: 3,
+                        tension: 0.2
+                    });
+                });
+            } else {
+                individualCard.classList.remove('hidden');
+                globalDoubleBanner.classList.add('hidden');
+
+                let pIdx = parseInt(selectedVal);
+                let puppy = litter.puppies[pIdx];
+                let puppyColor = puppy.color || '#e11d48';
+                
+                chartHeading.innerHTML = `<i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de croissance exclusive de ${puppy.name}`;
+                chartSubheading.innerText = `Affichage de la courbe individuelle de ${puppy.name}.`;
+                percentHeading.innerHTML = `<i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier (%) - ${puppy.name}`;
+                gainHeading.innerHTML = `<i class="fa-solid fa-weight-scale text-rose-500"></i> Prise de Poids Journalière (grammes) - ${puppy.name}`;
+
+                let globalExtremes = getGlobalElevageExtremes();
+                let badgeHtml = "";
+                let isLight = puppy.sex === 'Femelle';
+                let rosetteText = "";
+
+                if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
+                    rosetteText = puppy.sex === 'Mâle' ? "Plus léger de l'élevage" : "Plus légère de l'élevage";
+                } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
+                    rosetteText = puppy.sex === 'Mâle' ? "Plus lourd de l'élevage" : "Plus lourde de l'élevage";
+                } else if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === pIdx) {
+                    rosetteText = `Record gain 24h (+${globalExtremes.maxGain.val}g)`;
+                } else if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === pIdx) {
+                    rosetteText = puppy.sex === 'Mâle' ? "1er à doubler (x2) élevage" : "1ère à doubler (x2) élevage";
+                } else if (globalExtremes.firstTriple && globalExtremes.firstTriple.litterId === litter.id && globalExtremes.firstTriple.pIdx === pIdx) {
+                    rosetteText = puppy.sex === 'Mâle' ? "1er à tripler (x3) élevage" : "1ère à tripler (x3) élevage";
+                }
+
+                if (rosetteText !== "") {
+                    let lightClass = isLight ? 'light' : '';
+                    badgeHtml = `
+                        <div class="rosette-badge ml-3">
+                            <div class="rosette-circle ${lightClass}">${rosetteText}</div>
+                            <div class="rosette-ribbons"><div class="rosette-ribbon-left"></div><div class="rosette-ribbon-right"></div></div>
+                        </div>`;
+                }
+
+                document.getElementById('family-puppy-title').innerHTML = `<div class="flex items-center flex-wrap gap-2"><span>${puppy.name}</span>${badgeHtml}</div>`;
+                let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
+                document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
+
+                // --- GESTION DE LA VUE DE L'ENCADRÉ D'ÂGE ---
+                if (puppy.deceased) {
+                    ageBanner.classList.add('hidden');
+                } else {
+                    ageBanner.classList.remove('hidden');
+                    let birthDateStr = litter.birthDate; 
+                    if (birthDateStr) {
+                        let birthDateObj = new Date(birthDateStr);
+                        let todayObj = new Date();
+                        birthDateObj.setHours(0,0,0,0);
+                        todayObj.setHours(0,0,0,0);
+
+                        let diffTime = todayObj.getTime() - birthDateObj.getTime();
+                        let diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                        if (diffDays < 0) diffDays = 0;
+
+                        let ageText = "";
+
+                        if (diffDays >= 60) {
+                            let years = todayObj.getFullYear() - birthDateObj.getFullYear();
+                            let months = todayObj.getMonth() - birthDateObj.getMonth();
+                            let days = todayObj.getDate() - birthDateObj.getDate();
+
+                            if (days < 0) {
+                                months--;
+                                let prevMonth = new Date(todayObj.getFullYear(), todayObj.getMonth(), 0);
+                                days += prevMonth.getDate();
+                            }
+                            if (months < 0) {
+                                years--;
+                                months += 12;
+                            }
+
+                            let parts = [];
+                            if (years > 0) parts.push(`${years} an${years > 1 ? 's' : ''}`);
+                            if (months > 0) parts.push(`${months} mois`);
+                            if (days > 0 || parts.length === 0) parts.push(`${days} jour${days > 1 ? 's' : ''}`);
+                            
+                            ageText = parts.join(', ');
+                        } else {
+                            let weeks = Math.floor(diffDays / 7);
+                            let remDays = diffDays % 7;
+
+                            if (weeks === 0) {
+                                ageText = `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                            } else if (remDays === 0) {
+                                ageText = `${weeks} semaine${weeks > 1 ? 's' : ''} exactement`;
+                            } else {
+                                ageText = `${weeks} semaine${weeks > 1 ? 's' : ''} et ${remDays} jour${remDays > 1 ? 's' : ''}`;
+                            }
+                        }
+
+                        let formattedBirthDate = birthDateStr.split('-').reverse().join('/');
+
+                        document.getElementById('puppy-age-days').innerText = `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                        document.getElementById('puppy-birth-date-text').innerText = `Né(e) le ${formattedBirthDate}`;
+                        document.getElementById('puppy-age-weeks').innerText = ageText;
+
+                        ageBanner.style.borderColor = puppyColor;
+                        let iconEl = document.getElementById('puppy-ribbon-icon');
+                        iconEl.style.backgroundColor = puppyColor;
+                    }
+                }
+
+                let photoContainer = document.getElementById('family-puppy-photo-container');
+                if (puppy.photo) {
+                    photoContainer.innerHTML = `<img src="${puppy.photo}" class="w-14 h-14 rounded-full object-cover border-2 shadow-sm" style="border-color:${puppyColor};">`;
+                } else {
+                    photoContainer.innerHTML = `<div class="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center text-rose-400 border-2" style="border-color:${puppyColor};"><i class="fa-solid fa-dog text-xl"></i></div>`;
+                }
+
+                let birthW = litter.weights.length > 0 ? (litter.weights[0].values[pIdx] || 0) : 0;
+                let latestW = litter.weights.length > 0 ? (litter.weights[litter.weights.length - 1].values[pIdx] || '-') : '-';
+                let gain = (birthW > 0 && latestW !== '-') ? (latestW - birthW) : '-';
+
+                document.getElementById('fam-birth-weight').innerText = birthW + " g";
+                document.getElementById('fam-latest-weight').innerText = latestW + " g";
+                document.getElementById('fam-total-gain').innerText = (gain > 0 ? "+" : "") + gain + " g";
+
+                let doubleDateStr = calculateDoubleWeight(litter, pIdx);
+                let tripleDateStr = calculateTripleWeight(litter, pIdx);
+                document.getElementById('fam-double-weight').innerHTML = `
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppyColor};">Poids doublé (x2)</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppyColor};">Poids triplé (x3)</span> : <span class="text-rose-950 font-semibold">${tripleDateStr}</span></div>
+                `;
+
+                let notesContainer = document.getElementById('family-notes-list');
+                notesContainer.innerHTML = '';
+                let hasNotes = false;
+                litter.weights.forEach(w => {
+                    let noteText = w.notes && w.notes[pIdx] ? w.notes[pIdx].trim() : "";
+                    if (noteText !== "") {
+                        hasNotes = true;
+                        let dateFormatted = w.date.split('-').reverse().join('/');
+                        notesContainer.innerHTML += `
+                            <div class="flex items-start gap-2 bg-rose-50/40 p-2 rounded-lg border border-rose-100">
+                                <span class="font-bold text-rose-950 whitespace-nowrap"><i class="fa-solid fa-calendar-day mr-1 text-rose-400"></i>${dateFormatted} :</span>
+                                <span class="text-rose-800 italic">${noteText}</span>
+                            </div>
+                        `;
+                    }
+                });
+                if (!hasNotes) {
+                    notesContainer.innerHTML = `<p class="text-rose-600 italic">Aucune note ou événement particulier enregistré pour ce chiot.</p>`;
+                }
+
+                let data = litter.weights.map(w => w.values[pIdx] || null);
+                datasets.push({
+                    label: puppy.name,
+                    data: data,
+                    borderColor: puppyColor,
+                    backgroundColor: puppyColor,
+                    borderWidth: 4,
+                    tension: 0.2
+                });
+            }
+
+            familyChartInstance = new Chart(canvasCtx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: false } }
+                }
+            });
+
+            renderFamilyCompleteTables();
+        }
+
+        function renderFamilyCompleteTables() {
+            let litter = getCurrentLitter();
+            let selectedVal = document.getElementById('family-puppy-select').value;
+            let isIndividual = selectedVal !== "all";
+            let pIdx = isIndividual ? parseInt(selectedVal) : null;
+
+            let pTable = document.getElementById('family-percent-table');
+            let gTable = document.getElementById('family-gain-table');
+
+            if (isIndividual) {
+                let puppy = litter.puppies[pIdx];
+                let imgTag = puppy.photo ? `<img src="${puppy.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                
+                pTable.querySelector('thead tr').innerHTML = `<th class="p-3 rounded-l-xl">Date</th><th class="p-3 text-center rounded-r-xl" style="color:${puppy.color};">${imgTag}${puppy.name} (% Évolution)</th>`;
+                gTable.querySelector('thead tr').innerHTML = `<th class="p-3 rounded-l-xl">Date</th><th class="p-3 text-center rounded-r-xl" style="color:${puppy.color};">${imgTag}${puppy.name} (Prise en g)</th>`;
+
+                let pTbody = pTable.querySelector('tbody');
+                let gTbody = gTable.querySelector('tbody');
+                pTbody.innerHTML = '';
+                gTbody.innerHTML = '';
+
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let dateFormatted = litter.weights[i].date.split('-').reverse().join('/');
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    
+                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
+                    let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
+
+                    let colorClass = (pct !== null && pct < 3) ? "text-red-600 font-bold bg-red-50" : "text-rose-950";
+
+                    let trP = document.createElement('tr');
+                    trP.className = "hover:bg-rose-50/50";
+                    trP.innerHTML = `<td class="p-3 font-semibold">${dateFormatted}</td><td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
+                    pTbody.appendChild(trP);
+
+                    let trG = document.createElement('tr');
+                    trG.className = "hover:bg-rose-50/50";
+                    trG.innerHTML = `<td class="p-3 font-semibold">${dateFormatted}</td><td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
+                    gTbody.appendChild(trG);
+                }
+
+            } else {
+                pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
+                    let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                    return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+                }).join('');
+                
+                let pTbody = pTable.querySelector('tbody');
+                pTbody.innerHTML = '';
+
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let tr = document.createElement('tr');
+                    tr.className = "hover:bg-rose-50/50";
+                    tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+                    litter.puppies.forEach((p, idx) => {
+                        let prev = litter.weights[i-1].values[idx] || 0;
+                        let curr = litter.weights[i].values[idx] || 0;
+                        let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
+                        let colorClass = (pct !== null && pct < 3) ? "text-red-600 font-bold bg-red-50" : "text-rose-950";
+                        tr.innerHTML += `<td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
+                    });
+                    pTbody.appendChild(tr);
+                }
+
+                gTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
+                    let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                    return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+                }).join('');
+                
+                let gTbody = gTable.querySelector('tbody');
+                gTbody.innerHTML = '';
+
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let tr = document.createElement('tr');
+                    tr.className = "hover:bg-rose-50/50";
+                    tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+                    litter.puppies.forEach((p, idx) => {
+                        let prev = litter.weights[i-1].values[idx] || 0;
+                        let curr = litter.weights[i].values[idx] || 0;
+                        let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
+                        tr.innerHTML += `<td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
+                    });
+                    gTbody.appendChild(tr);
+                }
+            }
+        }
+
+        function openPrintableFiche() {
+            let litter = getCurrentLitter();
+            let selectedVal = document.getElementById('family-puppy-select').value;
+            if (selectedVal === "all") {
+                alert("Veuillez d'abord sélectionner un chiot spécifique dans le menu déroulant pour imprimer sa fiche.");
+                return;
+            }
+            let pIdx = parseInt(selectedVal);
+            let puppy = litter.puppies[pIdx];
+
+            let logoContainer = document.getElementById('print-logo-preview');
+            if (appData.headerPhoto) {
+                logoContainer.innerHTML = `<img src="${appData.headerPhoto}" class="w-12 h-12 rounded-full object-cover border border-rose-300">`;
+            } else {
+                logoContainer.innerHTML = `<div class="w-12 h-12 rounded-full bg-rose-200 flex items-center justify-center text-rose-600"><i class="fa-solid fa-dog"></i></div>`;
+            }
+
+            let photoContainer = document.getElementById('print-puppy-photo');
+            if (puppy.photo) {
+                photoContainer.innerHTML = `<img src="${puppy.photo}" class="w-16 h-16 rounded-full object-cover border-2 border-rose-300 shadow-sm">`;
+            } else {
+                photoContainer.innerHTML = `<div class="w-16 h-16 rounded-full bg-rose-200 flex items-center justify-center text-rose-500"><i class="fa-solid fa-dog text-2xl"></i></div>`;
+            }
+
+            document.getElementById('print-puppy-name').innerText = puppy.name;
+            let birthDateFormatted = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
+            document.getElementById('print-puppy-details').innerText = `Portée : ${litter.name} • Né(e) le ${birthDateFormatted} • Sexe : ${puppy.sex}`;
+            
+            let todayStr = new Date().toLocaleDateString('fr-FR');
+            document.getElementById('print-date-edition').innerText = `Édité le ${todayStr}`;
+
+            let birthW = litter.weights.length > 0 ? (litter.weights[0].values[pIdx] || 0) : 0;
+            let latestW = litter.weights.length > 0 ? (litter.weights[litter.weights.length - 1].values[pIdx] || 0) : 0;
+
+            document.getElementById('print-birth-w').innerText = birthW + " g";
+            document.getElementById('print-latest-w').innerText = latestW + " g";
+            document.getElementById('print-double-w').innerText = calculateDoubleWeight(litter, pIdx);
+            document.getElementById('print-triple-w').innerText = calculateTripleWeight(litter, pIdx);
+
+            let tbody = document.querySelector('#print-weights-table tbody');
+            tbody.innerHTML = '';
+
+            for (let i = 0; i < litter.weights.length; i++) {
+                let wRow = litter.weights[i];
+                let wVal = wRow.values[pIdx] || '-';
+                let dateFormatted = wRow.date.split('-').reverse().join('/');
+                let noteText = wRow.notes && wRow.notes[pIdx] ? wRow.notes[pIdx] : '';
+                
+                let pctStr = '-';
+                let gainStr = '-';
+
+                if (i > 0 && wVal !== '-') {
+                    let prevVal = litter.weights[i-1].values[pIdx] || 0;
+                    if (prevVal > 0) {
+                        let diff = wVal - prevVal;
+                        let pct = ((diff / prevVal) * 100).toFixed(1);
+                        gainStr = (diff > 0 ? '+' : '') + diff + ' g';
+                        pctStr = pct + '%';
+                    }
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2 border border-rose-200 font-medium">${dateFormatted}</td>
+                        <td class="p-2 border border-rose-200 text-center font-bold">${wVal} g</td>
+                        <td class="p-2 border border-rose-200 text-center">${pctStr}</td>
+                        <td class="p-2 border border-rose-200 text-center">${gainStr}</td>
+                        <td class="p-2 border border-rose-200 italic text-rose-800">${noteText}</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('printModal').classList.remove('hidden');
+        }
+
+        function closePrintableFiche() {
+            document.getElementById('printModal').classList.add('hidden');
+        }
+
+        function triggerQuickPhotoChange(pIdx) {
+            activePuppyIndexForPhoto = pIdx;
+            document.getElementById('quick-photo-input').value = "";
+            document.getElementById('quick-photo-input').click();
+        }
+
+        async function handleQuickPhotoUpload(input) {
+            if (input.files && input.files[0] && activePuppyIndexForPhoto !== null) {
+                let compressed = await compressImage(input.files[0], 250, 0.7);
+                let litter = getCurrentLitter();
+                litter.puppies[activePuppyIndexForPhoto].photo = compressed;
+                saveAllLitters();
+                initApp();
+            }
+        }
+
+        function renderWeightsTable() {
+            let litter = getCurrentLitter();
+            let tbody = document.getElementById('weights-tbody');
+            tbody.innerHTML = '';
+
+            litter.weights.forEach((wRow, wIdx) => {
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-rose-50/50 transition";
+
+                let tdDate = document.createElement('td');
+                tdDate.className = "p-3 font-semibold";
+                tdDate.innerHTML = `<input type="date" value="${wRow.date}" onchange="updateWeightDate(${wIdx}, this.value)" class="border border-rose-200 rounded-lg px-2 py-1 text-sm bg-white outline-none">`;
+                tr.appendChild(tdDate);
+
+                litter.puppies.forEach((p, pIdx) => {
+                    let tdVal = document.createElement('td');
+                    tdVal.className = "p-3";
+                    let currentVal = wRow.values[pIdx] !== undefined ? wRow.values[pIdx] : '';
+                    let currentNote = wRow.notes && wRow.notes[pIdx] !== undefined ? wRow.notes[pIdx] : '';
+                    tdVal.innerHTML = `
+                        <div class="flex flex-col gap-1.5">
+                            <input type="number" value="${currentVal}" placeholder="Poids g" onchange="updateWeightVal(${wIdx}, ${pIdx}, this.value)" class="w-28 border border-rose-200 rounded-lg px-2.5 py-1.5 text-sm bg-white outline-none text-center font-bold">
+                            <input type="text" value="${currentNote}" placeholder="Note (ex: yeux ouverts)" onchange="updatePuppyNote(${wIdx}, ${pIdx}, this.value)" class="w-32 border border-rose-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none italic text-rose-800">
+                        </div>
+                    `;
+                    tr.appendChild(tdVal);
+                });
+
+                let tdActions = document.createElement('td');
+                tdActions.className = "p-3 text-center";
+                tdActions.innerHTML = `<button onclick="deleteWeightRow(${wIdx})" class="text-rose-400 hover:text-red-600 p-1 rounded-lg"><i class="fa-solid fa-trash"></i></button>`;
+                tr.appendChild(tdActions);
+
+                tbody.appendChild(tr);
+            });
+
+            let theadTr = document.querySelector('#weights-table thead tr');
+            theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
+            litter.puppies.forEach((p, pIdx) => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-8 h-8 rounded-full object-cover inline-block mr-1.5 border-2 border-white shadow-sm">` : `<i class="fa-solid fa-dog mr-1">`;
+                
+                theadTr.innerHTML += `
+                    <th class="p-3 text-center" style="color:${p.color};">
+                        <div class="inline-flex items-center justify-center gap-1.5 cursor-pointer group" onclick="triggerQuickPhotoChange(${pIdx})" title="Cliquer pour modifier la photo">
+                            ${imgTag}
+                            <span class="group-hover:underline">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</span>
+                            <i class="fa-solid fa-camera text-[10px] text-rose-500 opacity-70 group-hover:opacity-100 ml-0.5"></i>
+                        </div>
+                    </th>`;
+            });
+            theadTr.innerHTML += '<th class="p-3 text-center rounded-r-xl">Actions</th>';
+        }
+
+        function addNewWeightRow() {
+            let litter = getCurrentLitter();
+            let today = new Date().toISOString().split('T')[0];
+            let lastVals = litter.weights.length > 0 ? [...litter.weights[litter.weights.length - 1].values] : litter.puppies.map(() => 0);
+            let emptyNotes = litter.puppies.map(() => "");
+            litter.weights.push({ date: today, values: lastVals, notes: emptyNotes });
+            saveAllLitters();
+            initApp();
+        }
+
+        function updateWeightDate(wIdx, val) {
+            let litter = getCurrentLitter();
+            litter.weights[wIdx].date = val;
+            saveAllLitters();
+            updateAdminChartDoubleSummary();
+            updateWeightAlertBanner();
+        }
+
+        function updateWeightVal(wIdx, pIdx, val) {
+            let litter = getCurrentLitter();
+            litter.weights[wIdx].values[pIdx] = val === '' ? 0 : parseFloat(val);
+            saveAllLitters();
+            updateAdminChartDoubleSummary();
+            updateWeightAlertBanner();
+            renderPercentTable();
+            renderGainTable();
+            if(wIdx === 0) {
+                renderWeightsTable();
+            }
+        }
+
+        function updatePuppyNote(wIdx, pIdx, val) {
+            let litter = getCurrentLitter();
+            if (!litter.weights[wIdx].notes) {
+                litter.weights[wIdx].notes = litter.puppies.map(() => "");
+            }
+            litter.weights[wIdx].notes[pIdx] = val;
+            saveAllLitters();
+        }
+
+        function deleteWeightRow(wIdx) {
+            let litter = getCurrentLitter();
+            litter.weights.splice(wIdx, 1);
+            saveAllLitters();
+            initApp();
+        }
+
+        function updateCharts() {
+            let litter = getCurrentLitter();
+            let ctx = document.getElementById('growthChart').getContext('2d');
+            if (growthChartInstance) growthChartInstance.destroy();
+
+            let labels = litter.weights.map(w => w.date.split('-').reverse().join('/'));
+            let datasets = [];
+            litter.puppies.forEach((p, idx) => {
+                datasets.push({
+                    label: p.name,
+                    data: litter.weights.map(w => w.values[idx] || null),
+                    borderColor: p.color,
+                    backgroundColor: p.color,
+                    borderWidth: 3,
+                    tension: 0.2
+                });
+            });
+
+            growthChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            updateAdminChartDoubleSummary();
+        }
+
+        function updateBarCharts() {
+            let litter = getCurrentLitter();
+            let ctxGain = document.getElementById('gainBarChart').getContext('2d');
+            if (gainBarChartInstance) gainBarChartInstance.destroy();
+
+            let labels = [];
+            for (let i = 1; i < litter.weights.length; i++) {
+                labels.push(litter.weights[i].date.split('-').reverse().join('/'));
+            }
+
+            let datasetsGain = [];
+            litter.puppies.forEach((p, pIdx) => {
+                let data = [];
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    data.push(curr > 0 && prev > 0 ? curr - prev : 0);
+                }
+                datasetsGain.push({ label: p.name, data: data, backgroundColor: p.color });
+            });
+
+            gainBarChartInstance = new Chart(ctxGain, {
+                type: 'bar',
+                data: { labels: labels, datasets: datasetsGain },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            let ctxPercent = document.getElementById('percentBarChart').getContext('2d');
+            if (percentBarChartInstance) percentBarChartInstance.destroy();
+
+            let datasetsPercent = [];
+            litter.puppies.forEach((p, pIdx) => {
+                let data = [];
+                for (let i = 1; i < litter.weights.length; i++) {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : 0;
+                    data.push(pct);
+                }
+                datasetsPercent.push({ label: p.name, data: data, backgroundColor: p.color });
+            });
+
+            percentBarChartInstance = new Chart(ctxPercent, {
+                type: 'bar',
+                data: { labels: labels, datasets: datasetsPercent },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function renderPercentTable() {
+            let litter = getCurrentLitter();
+            let table = document.getElementById('percent-table');
+            let theadTr = table.querySelector('thead tr');
+            theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
+            litter.puppies.forEach(p => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            });
+
+            let tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            for (let i = 1; i < litter.weights.length; i++) {
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-rose-50/50";
+                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+
+                litter.puppies.forEach((p, pIdx) => {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
+                    let colorClass = (pct !== null && pct < 3) ? "text-red-600 font-bold bg-red-50" : "text-rose-950";
+                    tr.innerHTML += `<td class="p-3 text-center ${colorClass}">${pct !== null ? pct + '%' : '-'}</td>`;
+                });
+                tbody.appendChild(tr);
+            }
+        }
+
+        function renderGainTable() {
+            let litter = getCurrentLitter();
+            let table = document.getElementById('gain-table');
+            let theadTr = table.querySelector('thead tr');
+            theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
+            litter.puppies.forEach(p => {
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
+                theadTr.innerHTML += `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
+            });
+
+            let tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            for (let i = 1; i < litter.weights.length; i++) {
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-rose-50/50";
+                tr.innerHTML = `<td class="p-3 font-semibold">${litter.weights[i].date.split('-').reverse().join('/')}</td>`;
+
+                litter.puppies.forEach((p, pIdx) => {
+                    let prev = litter.weights[i-1].values[pIdx] || 0;
+                    let curr = litter.weights[i].values[pIdx] || 0;
+                    let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
+                    tr.innerHTML += `<td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
+                });
+                tbody.appendChild(tr);
+            }
+        }
+
+        function switchActiveLitter(id) {
+            currentLitterId = id;
+            initApp();
+        }
+
+        function moveLitterUp(index) {
+            if (index <= 0) return;
+            let list = getLitters();
+            let temp = list[index];
+            list[index] = list[index - 1];
+            list[index - 1] = temp;
+            saveAllLitters();
+            renderAllLittersList();
+            updateAdminLitterSelect();
+        }
+
+        function moveLitterDown(index) {
+            let list = getLitters();
+            if (index >= list.length - 1) return;
+            let temp = list[index];
+            list[index] = list[index + 1];
+            list[index + 1] = temp;
+            saveAllLitters();
+            renderAllLittersList();
+            updateAdminLitterSelect();
+        }
+
+        function renderAllLittersList() {
+            let container = document.getElementById('all-litters-list');
+            container.innerHTML = '';
+            let list = getLitters();
+            
+            list.forEach((l, index) => {
+                let upDisabled = index === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
+                let downDisabled = index === list.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
+
+                container.innerHTML += `
+                    <div class="bg-rose-50/50 p-4 rounded-2xl border border-rose-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex flex-col gap-1">
+                                <button onclick="moveLitterUp(${index})" ${index === 0 ? 'disabled' : ''} class="w-7 h-7 bg-white text-rose-800 border border-rose-200 rounded-lg text-xs flex items-center justify-center transition ${upDisabled}" title="Monter">
+                                    <i class="fa-solid fa-arrow-up"></i>
+                                </button>
+                                <button onclick="moveLitterDown(${index})" ${index === list.length - 1 ? 'disabled' : ''} class="w-7 h-7 bg-white text-rose-800 border border-rose-200 rounded-lg text-xs flex items-center justify-center transition ${downDisabled}" title="Descendre">
+                                    <i class="fa-solid fa-arrow-down"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-rose-950">${l.name}</h4>
+                                <p class="text-xs text-rose-700">Né le ${l.birthDate ? l.birthDate.split('-').reverse().join('/') : '-'} • ${l.puppies.length} chiots</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button onclick="switchActiveLitter('${l.id}'); switchTab('saisie');" class="px-3 py-1.5 bg-rose-400 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold">Gérer</button>
+                            <button onclick="openEditLitterModal('${l.id}')" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold"><i class="fa-solid fa-pen"></i> Modifier</button>
+                            <button onclick="deleteLitter('${l.id}')" class="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-xs font-semibold"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openEditLitterModal(id) {
+            let list = getLitters();
+            let litter = list.find(l => l.id === id);
+            if (!litter) return;
+
+            document.getElementById('edit-litter-id').value = litter.id;
+            document.getElementById('edit-litter-name').value = litter.name;
+            document.getElementById('edit-litter-date').value = litter.birthDate || '';
+
+            let container = document.getElementById('edit-puppies-container');
+            container.innerHTML = '';
+
+            litter.puppies.forEach((p, idx) => {
+                let checkedAttr = p.deceased ? 'checked' : '';
+                container.innerHTML += `
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-rose-50/40 p-2.5 rounded-xl border border-rose-100 edit-puppy-row">
+                        <input type="text" value="${p.name}" placeholder="Nom du chiot" class="edit-p-name flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white font-semibold" data-photo="${p.photo || ''}" data-color="${p.color || defaultColors[idx % defaultColors.length]}">
+                        <select class="edit-p-sex border border-rose-200 rounded-lg px-2 py-1.5 text-xs outline-none bg-white">
+                            <option value="Mâle" ${p.sex === 'Mâle' ? 'selected' : ''}>Mâle</option>
+                            <option value="Femelle" ${p.sex === 'Femelle' ? 'selected' : ''}>Femelle</option>
+                        </select>
+                        <label class="flex items-center gap-1.5 text-xs text-rose-800 font-medium whitespace-nowrap cursor-pointer">
+                            <input type="checkbox" class="edit-p-deceased rounded text-rose-500 focus:ring-rose-400" ${checkedAttr}> Masquer le compteur d'âge
+                        </label>
+                        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            });
+
+            document.getElementById('editLitterModal').classList.remove('hidden');
+        }
+
+        function closeEditLitterModal() {
+            document.getElementById('editLitterModal').classList.add('hidden');
+        }
+
+        function saveEditedLitter() {
+            let id = document.getElementById('edit-litter-id').value;
+            let newName = document.getElementById('edit-litter-name').value || "Portée";
+            let newDate = document.getElementById('edit-litter-date').value || new Date().toISOString().split('T')[0];
+
+            let rowElements = document.querySelectorAll('.edit-puppy-row');
+            let newPuppies = [];
+
+            rowElements.forEach((row, idx) => {
+                let nameInput = row.querySelector('.edit-p-name');
+                let sexSelect = row.querySelector('.edit-p-sex');
+                let decCheckbox = row.querySelector('.edit-p-deceased');
+                if (nameInput && nameInput.value.trim() !== "") {
+                    newPuppies.push({
+                        name: nameInput.value.trim().toUpperCase(),
+                        sex: sexSelect.value,
+                        color: nameInput.getAttribute('data-color') || defaultColors[idx % defaultColors.length],
+                        photo: nameInput.getAttribute('data-photo') || '',
+                        deceased: decCheckbox ? decCheckbox.checked : false
+                    });
+                }
+            });
+
+            if (newPuppies.length === 0) {
+                alert("Une portée doit contenir au moins un chiot.");
+                return;
+            }
+
+            let list = getLitters();
+            let litter = list.find(l => l.id === id);
+            if (litter) {
+                litter.name = newName;
+                litter.birthDate = newDate;
+
+                litter.weights.forEach(w => {
+                    let newValues = [];
+                    let newNotes = [];
+                    for (let i = 0; i < newPuppies.length; i++) {
+                        newValues.push(w.values[i] !== undefined ? w.values[i] : 250);
+                        newNotes.push(w.notes && w.notes[i] !== undefined ? w.notes[i] : "");
+                    }
+                    w.values = newValues;
+                    w.notes = newNotes;
+                });
+
+                litter.puppies = newPuppies;
+                saveAllLitters();
+                closeEditLitterModal();
+                initApp();
+                renderAllLittersList();
+                alert("Portée modifiée avec succès !");
+            }
+        }
+
+        function importOldLitterExcel(input) {
+            if (!input.files || !input.files[0]) return;
+            let file = input.files[0];
+            let reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    let data = new Uint8Array(e.target.result);
+                    let workbook = XLSX.read(data, { type: 'array' });
+                    let firstSheetName = workbook.SheetNames[0];
+                    let worksheet = workbook.Sheets[firstSheetName];
+                    let jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (jsonRows.length < 2) {
+                        alert("Le fichier Excel semble vide ou mal formaté.");
+                        return;
+                    }
+
+                    let headerRow = jsonRows[0];
+                    let puppies = [];
+                    for (let c = 1; c < headerRow.length; c++) {
+                        let puppyName = String(headerRow[c] || `Chiot ${c}`).trim();
+                        if (puppyName !== "") {
+                            puppies.push({
+                                name: puppyName.toUpperCase(),
+                                sex: "Femelle",
+                                color: defaultColors[(puppies.length) % defaultColors.length],
+                                photo: "",
+                                deceased: false
+                            });
+                        }
+                    }
+
+                    if (puppies.length === 0) {
+                        alert("Aucun nom de chiot trouvé dans l'en-tête du fichier.");
+                        return;
+                    }
+
+                    let weights = [];
+                    let birthDate = new Date().toISOString().split('T')[0];
+
+                    for (let r = 1; r < jsonRows.length; r++) {
+                        let row = jsonRows[r];
+                        if (!row || row.length === 0) continue;
+                        
+                        let rawDate = row[0];
+                        let dateStr = "";
+                        
+                        if (typeof rawDate === 'number') {
+                            let dateObj = XLSX.SSF.parse_date_code(rawDate);
+                            if (dateObj) {
+                                dateStr = `${dateObj.y}-${String(dateObj.m).padStart(2,'0')}-${String(dateObj.d).padStart(2,'0')}`;
+                            }
+                        } else if (typeof rawDate === 'string') {
+                            dateStr = rawDate.trim();
+                            if (dateStr.includes('/')) {
+                                let parts = dateStr.split('/');
+                                if (parts.length === 3) {
+                                    dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                }
+                            }
+                        }
+
+                        if (!dateStr || isNaN(new Date(dateStr).getTime())) continue;
+
+                        if (weights.length === 0) {
+                            birthDate = dateStr;
+                        }
+
+                        let values = [];
+                        for (let c = 0; c < puppies.length; c++) {
+                            let val = parseFloat(row[c + 1]);
+                            values.push(isNaN(val) ? 0 : val);
+                        }
+                        let notes = puppies.map(() => "");
+                        weights.push({ date: dateStr, values: values, notes: notes });
+                    }
+
+                    if (weights.length === 0) {
+                        alert("Aucune ligne de pesée valide trouvée dans le fichier.");
+                        return;
+                    }
+
+                    let litterName = file.name.replace(/\.[^/.]+$/, "").replace(/[_]/g, " ");
+
+                    let importedLitter = {
+                        id: "litter-" + Date.now() + "-" + Math.floor(Math.random()*1000),
+                        name: litterName,
+                        birthDate: birthDate,
+                        puppies: puppies,
+                        weights: weights
+                    };
+
+                    appData.litters.push(importedLitter);
+                    currentLitterId = importedLitter.id;
+                    saveAllLitters();
+                    initApp();
+                    switchTab('saisie');
+                    alert(`Portée "${litterName}" importée avec succès (${puppies.length} chiots, ${weights.length} dates de pesées) !`);
+                } catch (err) {
+                    console.error(err);
+                    alert("Erreur lors de la lecture du fichier Excel : " + err.message);
+                }
+                input.value = "";
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function openNewLitterModal() {
+            document.getElementById('newLitterModal').classList.remove('hidden');
+            renderPuppyNameInputs();
+        }
+
+        function closeNewLitterModal() {
+            document.getElementById('newLitterModal').classList.add('hidden');
+        }
+
+        function renderPuppyNameInputs() {
+            let count = parseInt(document.getElementById('modal-puppy-count').value) || 4;
+            let container = document.getElementById('modal-puppy-names-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                container.innerHTML += `
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-rose-50/40 p-2.5 rounded-xl border border-rose-100">
+                        <span class="text-xs font-bold text-rose-800 w-16">Chiot #${i}</span>
+                        <input type="text" id="puppy-name-${i}" placeholder="Nom" value="Chiot ${i}" class="flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white">
+                        <select id="puppy-sex-${i}" class="border border-rose-200 rounded-lg px-2 py-1.5 text-xs outline-none bg-white">
+                            <option value="Mâle">Mâle</option>
+                            <option value="Femelle" selected>Femelle</option>
+                        </select>
+                        <div class="flex items-center gap-1.5 w-full sm:w-auto">
+                            <label class="text-[11px] text-rose-700 font-medium whitespace-nowrap"><i class="fa-solid fa-camera mr-1"></i>Photo :</label>
+                            <input type="file" id="puppy-photo-${i}" accept="image/*" class="text-xs text-rose-800 w-full sm:w-44 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-800 hover:file:bg-rose-200 cursor-pointer">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        async function generateNewLitter() {
+            let name = document.getElementById('modal-litter-name').value || "Nouvelle portée";
+            let date = document.getElementById('modal-litter-date').value || new Date().toISOString().split('T')[0];
+            let count = parseInt(document.getElementById('modal-puppy-count').value) || 4;
+
+            let puppies = [];
+
+            for (let i = 1; i <= count; i++) {
+                let pName = document.getElementById(`puppy-name-${i}`).value || `Chiot ${i}`;
+                let pSex = document.getElementById(`puppy-sex-${i}`).value;
+                let fileInput = document.getElementById(`puppy-photo-${i}`);
+
+                let compressedPhoto = "";
+                if (fileInput.files && fileInput.files[0]) {
+                    compressedPhoto = await compressImage(fileInput.files[0], 250, 0.7);
+                }
+
+                puppies.push({
+                    name: pName.toUpperCase(),
+                    sex: pSex,
+                    color: defaultColors[(i - 1) % defaultColors.length],
+                    photo: compressedPhoto,
+                    deceased: false
+                });
+            }
+
+            finalizeNewLitter(name, date, puppies);
+        }
+
+        function finalizeNewLitter(name, date, puppies) {
+            let newLitter = {
+                id: "litter-" + Date.now(),
+                name: name,
+                birthDate: date,
+                puppies: puppies,
+                weights: [{ date: date, values: puppies.map(() => 250), notes: puppies.map(() => "Naissance") }]
+            };
+
+            let list = getLitters();
+            list.push(newLitter);
+            currentLitterId = newLitter.id;
+            saveAllLitters();
+            closeNewLitterModal();
+            initApp();
+        }
+
+        function deleteLitter(id) {
+            let list = getLitters();
+            if (list.length <= 1) {
+                alert("Vous ne pouvez pas supprimer la dernière portée active.");
+                return;
+            }
+            if (confirm("Êtes-vous sûr de vouloir supprimer cette portée ?")) {
+                appData.litters = list.filter(l => l.id !== id);
+                currentLitterId = appData.litters[0].id;
+                saveAllLitters();
+                initApp();
+            }
+        }
+
+        function exportToExcel() {
+            let litter = getCurrentLitter();
+            let data = [];
+            let header = ["Date"];
+            litter.puppies.forEach(p => {
+                header.push(p.name + " (Poids)");
+                header.push(p.name + " (Note)");
+            });
+            data.push(header);
+
+            litter.weights.forEach(w => {
+                let row = [w.date];
+                litter.puppies.forEach((_, pIdx) => {
+                    row.push(w.weights && w.weights[pIdx] ? w.weights[pIdx] : (w.values ? w.values[pIdx] || "" : ""));
+                    row.push(w.notes && w.notes[pIdx] ? w.notes[pIdx] : "");
+                });
+                data.push(row);
+            });
+
+            let ws = XLSX.utils.aoa_to_sheet(data);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Suivi Poids & Notes");
+            XLSX.writeFile(wb, `${litter.name.replace(/[^a-zA-Z0-9]/g, '_')}_suivi.xlsx`);
+        }
+
+        window.addEventListener('pageshow', async function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadDataFromSupabase();
+            if (window.location.hash === '#famille') {
+                openFamilyPortal();
+            } else {
+                initApp();
+            }
+        });
+    </script>
+</body>
+</html>
