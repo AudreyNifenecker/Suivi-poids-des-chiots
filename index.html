@@ -142,8 +142,11 @@
                     <select id="admin-litter-select" onchange="onAdminLitterChange()" class="w-full border border-rose-200 rounded-xl px-4 py-2 text-sm font-semibold bg-rose-50/30 outline-none focus:ring-2 focus:ring-rose-400">
                     </select>
                 </div>
-                <div class="text-xs text-rose-700 text-right hidden md:block">
-                    <span>Changez de portée instantanément en un clic.</span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="document.getElementById('import-adult-excel-input').click()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-3.5 py-2 rounded-xl text-xs shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-ruler-combined"></i> Importer Poids & Tailles Adultes (Excel)
+                    </button>
+                    <input type="file" id="import-adult-excel-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="importAdultStatsExcel(this)">
                 </div>
             </div>
 
@@ -244,7 +247,10 @@
                     </h2>
                     <p class="text-xs text-rose-700 mt-1">Basculez, modifiez, supprimez, réorganisez ou importez vos portées.</p>
                 </div>
-                <div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="document.getElementById('import-adult-excel-input').click()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-ruler-combined"></i> Importer Poids & Tailles Adultes (Excel)
+                    </button>
                     <button onclick="document.getElementById('import-excel-input').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center gap-2">
                         <i class="fa-solid fa-file-import"></i> Importer une ancienne portée (Excel)
                     </button>
@@ -317,6 +323,29 @@
                         <div class="text-center sm:text-right w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-rose-100 pt-3 sm:pt-0 sm:pl-4">
                             <p id="puppy-birth-date-text" class="text-xs font-semibold text-rose-800">Né(e) le -</p>
                             <p id="puppy-age-weeks" class="text-sm font-bold text-rose-600 mt-0.5">-</p>
+                        </div>
+                    </div>
+
+                    <!-- ENCADRÉ POIDS & TAILLE ADULTE (IMPORT EXCEL) -->
+                    <div id="puppy-adult-stats-banner" class="hidden bg-white border border-purple-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center shadow-sm flex-shrink-0">
+                                <i class="fa-solid fa-ruler-combined text-base"></i>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-purple-800 block">Gabarit Adulte</span>
+                                <p class="text-xs text-purple-600">Données actualisées de suivi adulte</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-6 w-full sm:w-auto justify-around sm:justify-end border-t sm:border-t-0 sm:border-l border-purple-100 pt-3 sm:pt-0 sm:pl-5">
+                            <div class="text-center">
+                                <span class="text-[11px] font-bold uppercase text-rose-700 block">Taille adulte</span>
+                                <p id="puppy-adult-size" class="text-lg font-extrabold text-rose-950">-</p>
+                            </div>
+                            <div class="text-center">
+                                <span class="text-[11px] font-bold uppercase text-rose-700 block">Poids adulte</span>
+                                <p id="puppy-adult-weight" class="text-lg font-extrabold text-purple-700">-</p>
+                            </div>
                         </div>
                     </div>
 
@@ -444,6 +473,17 @@
                     </div>
                 </div>
 
+                <div id="print-adult-stats-row" class="hidden grid grid-cols-2 gap-3 text-center">
+                    <div class="bg-purple-50/60 p-2.5 rounded-xl border border-purple-200">
+                        <span class="text-[11px] text-purple-800 uppercase font-bold block">Taille Adulte</span>
+                        <span id="print-adult-size" class="text-sm font-bold text-rose-950">-</span>
+                    </div>
+                    <div class="bg-purple-50/60 p-2.5 rounded-xl border border-purple-200">
+                        <span class="text-[11px] text-purple-800 uppercase font-bold block">Poids Adulte</span>
+                        <span id="print-adult-weight" class="text-sm font-bold text-purple-800">-</span>
+                    </div>
+                </div>
+
                 <div>
                     <h4 class="font-bold text-sm text-rose-900 mb-2"><i class="fa-solid fa-table mr-1 text-rose-500"></i> Historique des pesées & Notes du chiot :</h4>
                     <div class="overflow-x-auto">
@@ -554,10 +594,10 @@
                     name: "Portée Utopia 2026",
                     birthDate: "2026-04-23",
                     puppies: [
-                        { name: "BAIKA", sex: "Femelle", color: "#e11d48", photo: "", deceased: false },
-                        { name: "BLACK JACK", sex: "Mâle", color: "#2563eb", photo: "", deceased: false },
-                        { name: "BANKAI", sex: "Mâle", color: "#059669", photo: "", deceased: false },
-                        { name: "BLISS", sex: "Femelle", color: "#d97706", photo: "", deceased: false }
+                        { name: "BAIKA", sex: "Femelle", color: "#e11d48", photo: "", deceased: false, adultSize: "", adultWeight: "" },
+                        { name: "BLACK JACK", sex: "Mâle", color: "#2563eb", photo: "", deceased: false, adultSize: "", adultWeight: "" },
+                        { name: "BANKAI", sex: "Mâle", color: "#059669", photo: "", deceased: false, adultSize: "", adultWeight: "" },
+                        { name: "BLISS", sex: "Femelle", color: "#d97706", photo: "", deceased: false, adultSize: "", adultWeight: "" }
                     ],
                     weights: [
                         { date: "2026-04-23", values: [287, 265, 276, 298], notes: ["Naissance", "Naissance", "Naissance", "Naissance"] },
@@ -579,6 +619,110 @@
             return list.find(l => l.id === currentLitterId) || list[0];
         }
 
+        function normalizeString(str) {
+            return String(str || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .trim()
+                .toUpperCase();
+        }
+
+        function formatAdultSize(val) {
+            if (val === undefined || val === null || String(val).trim() === "") return "";
+            let str = String(val).trim();
+            if (!isNaN(str.replace(',', '.'))) {
+                return str + " cm";
+            }
+            return str;
+        }
+
+        function formatAdultWeight(val) {
+            if (val === undefined || val === null || String(val).trim() === "") return "";
+            let str = String(val).trim();
+            let num = parseFloat(str.replace(',', '.'));
+            if (!isNaN(num) && String(num) === str.replace(',', '.')) {
+                return num >= 100 ? (num + " g") : (str + " kg");
+            }
+            return str;
+        }
+
+        function importAdultStatsExcel(input) {
+            if (!input.files || !input.files[0]) return;
+            let file = input.files[0];
+            let reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    let data = new Uint8Array(e.target.result);
+                    let workbook = XLSX.read(data, { type: 'array' });
+                    let firstSheetName = workbook.SheetNames[0];
+                    let worksheet = workbook.Sheets[firstSheetName];
+                    let jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (jsonRows.length < 2) {
+                        alert("Le fichier Excel semble vide ou ne contient pas de données.");
+                        return;
+                    }
+
+                    let headerRow = jsonRows[0].map(h => normalizeString(h));
+                    let nameCol = headerRow.findIndex(h => h.includes("NOM") || h.includes("CHIOT"));
+                    let sizeCol = headerRow.findIndex(h => h.includes("TAILLE"));
+                    let weightCol = headerRow.findIndex(h => h.includes("POIDS"));
+
+                    if (nameCol === -1) nameCol = 0;
+                    if (sizeCol === -1) sizeCol = 1;
+                    if (weightCol === -1) weightCol = 2;
+
+                    let updatedCount = 0;
+                    let unmatchedNames = [];
+
+                    for (let r = 1; r < jsonRows.length; r++) {
+                        let row = jsonRows[r];
+                        if (!row || row.length === 0) continue;
+
+                        let rawName = row[nameCol];
+                        if (!rawName || String(rawName).trim() === "") continue;
+
+                        let targetNorm = normalizeString(rawName);
+                        let rawSize = row[sizeCol] !== undefined ? String(row[sizeCol]).trim() : "";
+                        let rawWeight = row[weightCol] !== undefined ? String(row[weightCol]).trim() : "";
+
+                        let matched = false;
+                        appData.litters.forEach(litter => {
+                            litter.puppies.forEach(puppy => {
+                                if (normalizeString(puppy.name) === targetNorm) {
+                                    if (rawSize !== "") puppy.adultSize = formatAdultSize(rawSize);
+                                    if (rawWeight !== "") puppy.adultWeight = formatAdultWeight(rawWeight);
+                                    matched = true;
+                                }
+                            });
+                        });
+
+                        if (matched) {
+                            updatedCount++;
+                        } else {
+                            unmatchedNames.push(String(rawName).trim());
+                        }
+                    }
+
+                    saveAllLitters();
+                    initApp();
+
+                    let msg = `${updatedCount} chiot(s) mis à jour avec leur taille et poids adulte !`;
+                    if (unmatchedNames.length > 0) {
+                        msg += `\n\nNoms non trouvés dans les portées : ${unmatchedNames.join(", ")}`;
+                    }
+                    msg += "\n\nPensez à cliquer sur « Enregistrer sur le cloud » pour synchroniser avec la vue familles.";
+                    alert(msg);
+                } catch (err) {
+                    console.error(err);
+                    alert("Erreur lors de la lecture du fichier Excel : " + err.message);
+                }
+                input.value = "";
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
         function getGlobalElevageExtremes() {
             let allBirths = [];
             let allGains = [];
@@ -591,6 +735,16 @@
                 if (!l.weights || l.weights.length === 0 || !l.birthDate) return;
                 let firstRow = l.weights[0];
                 let secondRow = l.weights.length > 1 ? l.weights[1] : null;
+
+                let is24hStep = false;
+                if (secondRow && firstRow.date && secondRow.date) {
+                    let d0 = new Date(firstRow.date);
+                    let d1 = new Date(secondRow.date);
+                    let diffDays01 = Math.round((d1 - d0) / (1000 * 60 * 60 * 24));
+                    if (diffDays01 === 1) {
+                        is24hStep = true;
+                    }
+                }
 
                 l.puppies.forEach((p, pIdx) => {
                     let birthW = firstRow.values[pIdx] || 0;
@@ -609,15 +763,17 @@
                                     pct: parseFloat(pctFirstDay.toFixed(1))
                                 });
 
-                                let gainFirstStep = nextW - birthW;
-                                if (gainFirstStep > 0) {
-                                    allFirst24hGain.push({
-                                        litterId: l.id,
-                                        pIdx: pIdx,
-                                        name: p.name,
-                                        sex: p.sex,
-                                        gain: gainFirstStep
-                                    });
+                                if (is24hStep) {
+                                    let gain24h = nextW - birthW;
+                                    if (gain24h > 0) {
+                                        allFirst24hGain.push({
+                                            litterId: l.id,
+                                            pIdx: pIdx,
+                                            name: p.name,
+                                            sex: p.sex,
+                                            gain: gain24h
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -1103,6 +1259,7 @@
             let individualCard = document.getElementById('family-individual-card');
             let globalDoubleBanner = document.getElementById('family-global-double-banner');
             let ageBanner = document.getElementById('puppy-age-banner');
+            let adultStatsBanner = document.getElementById('puppy-adult-stats-banner');
 
             let chartHeading = document.getElementById('family-chart-heading');
             let chartSubheading = document.getElementById('family-chart-subheading');
@@ -1148,12 +1305,12 @@
                 let isLight = puppy.sex === 'Femelle';
                 let rosetteText = "";
 
-                if (globalExtremes.maxFirst24hGain && globalExtremes.maxFirst24hGain.litterId === litter.id && globalExtremes.maxFirst24hGain.pIdx === pIdx) {
-                    rosetteText = `Record 1res 24h (+${globalExtremes.maxFirst24hGain.gain}g)`;
-                } else if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
-                    rosetteText = "Poids le plus léger à la naissance";
+                if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
+                    rosetteText = `Plus léger naissance (${globalExtremes.minBirth.val}g)`;
                 } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
-                    rosetteText = "Poids le plus lourd à la naissance";
+                    rosetteText = `Plus lourd naissance (${globalExtremes.maxBirth.val}g)`;
+                } else if (globalExtremes.maxFirst24hGain && globalExtremes.maxFirst24hGain.litterId === litter.id && globalExtremes.maxFirst24hGain.pIdx === pIdx) {
+                    rosetteText = `Record 24h (+${globalExtremes.maxFirst24hGain.gain}g)`;
                 } else if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === pIdx) {
                     rosetteText = `Record gain 24h (+${globalExtremes.maxGain.val}g)`;
                 } else if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === pIdx) {
@@ -1234,6 +1391,16 @@
                         ageBanner.style.borderColor = puppyColor;
                         document.getElementById('puppy-ribbon-icon').style.backgroundColor = puppyColor;
                     }
+                }
+
+                let hasAdultSize = puppy.adultSize && String(puppy.adultSize).trim() !== "";
+                let hasAdultWeight = puppy.adultWeight && String(puppy.adultWeight).trim() !== "";
+                if (hasAdultSize || hasAdultWeight) {
+                    adultStatsBanner.classList.remove('hidden');
+                    document.getElementById('puppy-adult-size').innerText = hasAdultSize ? puppy.adultSize : "-";
+                    document.getElementById('puppy-adult-weight').innerText = hasAdultWeight ? puppy.adultWeight : "-";
+                } else {
+                    adultStatsBanner.classList.add('hidden');
                 }
 
                 let photoContainer = document.getElementById('family-puppy-photo-container');
@@ -1426,6 +1593,17 @@
             document.getElementById('print-double-w').innerText = calculateDoubleWeight(litter, pIdx);
             document.getElementById('print-triple-w').innerText = calculateTripleWeight(litter, pIdx);
 
+            let adultRow = document.getElementById('print-adult-stats-row');
+            let hasAdultSize = puppy.adultSize && String(puppy.adultSize).trim() !== "";
+            let hasAdultWeight = puppy.adultWeight && String(puppy.adultWeight).trim() !== "";
+            if (hasAdultSize || hasAdultWeight) {
+                adultRow.classList.remove('hidden');
+                document.getElementById('print-adult-size').innerText = hasAdultSize ? puppy.adultSize : "-";
+                document.getElementById('print-adult-weight').innerText = hasAdultWeight ? puppy.adultWeight : "-";
+            } else {
+                adultRow.classList.add('hidden');
+            }
+
             let tbody = document.querySelector('#print-weights-table tbody');
             tbody.innerHTML = '';
 
@@ -1522,6 +1700,9 @@
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
             litter.puppies.forEach((p, pIdx) => {
                 let imgTag = p.photo ? `<img src="${p.photo}" class="w-8 h-8 rounded-full object-cover inline-block mr-1.5 border-2 border-white shadow-sm">` : `<i class="fa-solid fa-dog mr-1"></i>`;
+                let adultBadge = (p.adultSize || p.adultWeight)
+                    ? `<div class="text-[10px] font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2 py-0.5 mt-1 inline-block">Adulte : ${p.adultSize || '-'} / ${p.adultWeight || '-'}</div>`
+                    : '';
                 theadTr.innerHTML += `
                     <th class="p-3 text-center" style="color:${p.color};">
                         <div class="inline-flex items-center justify-center gap-1.5 cursor-pointer group" onclick="triggerQuickPhotoChange(${pIdx})" title="Cliquer pour modifier la photo">
@@ -1529,6 +1710,7 @@
                             <span class="group-hover:underline">${p.name} (${p.sex === 'Mâle' ? '♂' : '♀'})</span>
                             <i class="fa-solid fa-camera text-[10px] text-rose-500 opacity-70 group-hover:opacity-100 ml-0.5"></i>
                         </div>
+                        <div>${adultBadge}</div>
                     </th>`;
             });
             theadTr.innerHTML += '<th class="p-3 text-center rounded-r-xl">Actions</th>';
@@ -1792,7 +1974,7 @@
                 let checkedAttr = p.deceased ? 'checked' : '';
                 container.innerHTML += `
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-rose-50/40 p-2.5 rounded-xl border border-rose-100 edit-puppy-row">
-                        <input type="text" value="${p.name}" placeholder="Nom du chiot" class="edit-p-name flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white font-semibold" data-photo="${p.photo || ''}" data-color="${p.color || defaultColors[idx % defaultColors.length]}">
+                        <input type="text" value="${p.name}" placeholder="Nom du chiot" class="edit-p-name flex-1 border border-rose-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white font-semibold" data-photo="${p.photo || ''}" data-color="${p.color || defaultColors[idx % defaultColors.length]}" data-adult-size="${p.adultSize || ''}" data-adult-weight="${p.adultWeight || ''}">
                         <select class="edit-p-sex border border-rose-200 rounded-lg px-2 py-1.5 text-xs outline-none bg-white">
                             <option value="Mâle" ${p.sex === 'Mâle' ? 'selected' : ''}>Mâle</option>
                             <option value="Femelle" ${p.sex === 'Femelle' ? 'selected' : ''}>Femelle</option>
@@ -1830,7 +2012,9 @@
                         sex: sexSelect.value,
                         color: nameInput.getAttribute('data-color') || defaultColors[idx % defaultColors.length],
                         photo: nameInput.getAttribute('data-photo') || '',
-                        deceased: decCheckbox ? decCheckbox.checked : false
+                        deceased: decCheckbox ? decCheckbox.checked : false,
+                        adultSize: nameInput.getAttribute('data-adult-size') || '',
+                        adultWeight: nameInput.getAttribute('data-adult-weight') || ''
                     });
                 }
             });
@@ -1894,7 +2078,9 @@
                                 sex: "Femelle",
                                 color: defaultColors[(puppies.length) % defaultColors.length],
                                 photo: "",
-                                deceased: false
+                                deceased: false,
+                                adultSize: "",
+                                adultWeight: ""
                             });
                         }
                     }
@@ -2025,7 +2211,9 @@
                     sex: pSex,
                     color: defaultColors[(i - 1) % defaultColors.length],
                     photo: compressedPhoto,
-                    deceased: false
+                    deceased: false,
+                    adultSize: "",
+                    adultWeight: ""
                 });
             }
 
