@@ -16,31 +16,30 @@
         body { font-family: 'Poppins', sans-serif; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
-        /* Vraie Cocarde / Rosace de Concours avec texte au centre et rubans */
+
         .rosette-badge {
             display: inline-flex;
             flex-direction: column;
             align-items: center;
-            margin-top: 6px;
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+            margin-top: 4px;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.12));
         }
         .rosette-circle {
             background: radial-gradient(circle, #fcd34d 0%, #d97706 100%);
             color: #ffffff;
-            font-size: 9px;
+            font-size: 8.5px;
             font-weight: 700;
-            padding: 8px 12px;
+            padding: 8px;
             border-radius: 50%;
-            width: 95px;
-            height: 95px;
+            width: 102px;
+            height: 102px;
             display: flex;
             align-items: center;
             text-align: center;
             justify-content: center;
             border: 2px dashed #fef3c7;
             text-transform: uppercase;
-            line-height: 1.1;
+            line-height: 1.15;
             box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), 0 3px 6px rgba(0,0,0,0.15);
             position: relative;
             z-index: 2;
@@ -49,7 +48,6 @@
             background: radial-gradient(circle, #fb7185 0%, #be123c 100%);
             border: 2px dashed #ffe4e6;
         }
-        /* Les rubans de la cocarde en bas */
         .rosette-ribbons {
             display: flex;
             justify-content: center;
@@ -72,6 +70,7 @@
             body * { visibility: hidden; }
             #printable-fiche, #printable-fiche * { visibility: visible; }
             #printable-fiche { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 20px; background: white; }
+            .no-print { display: none !important; }
         }
     </style>
     <script>
@@ -89,9 +88,7 @@
         <!-- Header -->
         <header class="bg-rose-100 text-rose-950 border border-rose-200 rounded-2xl p-6 shadow-xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
-                <div id="header-logo-container" onclick="triggerHeaderPhotoChange()" class="cursor-pointer group relative" title="Cliquer pour changer le logo/photo de l'élevage">
-                    <!-- Rendu dynamique du logo -->
-                </div>
+                <div id="header-logo-container" onclick="triggerHeaderPhotoChange()" class="cursor-pointer group relative" title="Cliquer pour changer le logo/photo de l'élevage"></div>
                 <div>
                     <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
                         Suivi Portées - Nurserie
@@ -187,7 +184,7 @@
                 <i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de Croissance Pondérale (g)
             </h2>
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm">
-                <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) & triplé (x3) - Liste de la portée :</span>
+                <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) & triplé (x3) par rapport au poids de naissance :</span>
                 <div id="admin-chart-double-summary" class="flex flex-wrap gap-2 text-xs text-amber-950 font-medium"></div>
             </div>
             <div style="position: relative; height: 420px; width: 100%;">
@@ -306,7 +303,7 @@
                         </div>
                     </div>
 
-                    <!-- ENCADRÉ COMPTEUR D'ÂGE AUTOMATIQUE (masqué si désactivé) -->
+                    <!-- ENCADRÉ COMPTEUR D'ÂGE AUTOMATIQUE -->
                     <div id="puppy-age-banner" class="bg-white border-2 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div class="flex items-center gap-3 w-full sm:w-auto">
                             <div id="puppy-ribbon-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md flex-shrink-0">
@@ -339,7 +336,7 @@
                     </div>
 
                     <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm space-y-1">
-                        <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) & triplé (x3) :</span>
+                        <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Doubler (x2) & tripler (x3) son poids de naissance :</span>
                         <div id="fam-double-weight" class="flex flex-wrap gap-2 text-xs text-amber-950 font-medium"></div>
                     </div>
 
@@ -361,9 +358,8 @@
                         <p id="family-chart-subheading" class="text-xs text-rose-700">Visualisez l'évolution de tous les frères et sœurs en même temps.</p>
                     </div>
 
-                    <!-- BANDEAU GLOBAL POIDS DOUBLÉ & TRIPLÉ (VISIBLE EN VUE GLOBALE) -->
                     <div id="family-global-double-banner" class="bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-sm space-y-1">
-                        <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Poids doublé (x2) & triplé (x3) - Toute la portée :</span>
+                        <span class="text-xs font-bold text-amber-900 uppercase block mb-1"><i class="fa-solid fa-weight-scale mr-1 text-amber-600"></i> Doubler (x2) & tripler (x3) son poids de naissance - Toute la portée :</span>
                         <div id="family-global-double-summary" class="flex flex-wrap gap-2 text-xs text-amber-950 font-medium"></div>
                     </div>
 
@@ -439,11 +435,11 @@
                         <span id="print-latest-w" class="text-lg font-bold text-rose-600">- g</span>
                     </div>
                     <div class="bg-rose-50/40 p-3 rounded-xl border border-rose-100">
-                        <span class="text-[11px] text-rose-700 uppercase font-bold block">Poids Doublé (x2)</span>
+                        <span class="text-[11px] text-rose-700 uppercase font-bold block">Doubler naissance (x2)</span>
                         <span id="print-double-w" class="text-xs font-bold text-amber-700">-</span>
                     </div>
                     <div class="bg-rose-50/40 p-3 rounded-xl border border-rose-100">
-                        <span class="text-[11px] text-rose-700 uppercase font-bold block">Poids Triplé (x3)</span>
+                        <span class="text-[11px] text-rose-700 uppercase font-bold block">Tripler naissance (x3)</span>
                         <span id="print-triple-w" class="text-xs font-bold text-amber-700">-</span>
                     </div>
                 </div>
@@ -546,7 +542,6 @@
         </div>
     </div>
 
-    <!-- Inputs fichiers cachés -->
     <input type="file" id="quick-photo-input" accept="image/*" class="hidden" onchange="handleQuickPhotoUpload(this)">
     <input type="file" id="header-photo-input" accept="image/*" class="hidden" onchange="handleHeaderPhotoUpload(this)">
 
@@ -584,18 +579,28 @@
             return list.find(l => l.id === currentLitterId) || list[0];
         }
 
-        // --- CALCULATEURS GLOBAUX SUR TOUT L'ÉLEVAGE ---
         function getGlobalElevageExtremes() {
             let allBirths = [];
             let allGains = [];
             let allDoubles = [];
             let allTriples = [];
             let allFirstDayPct = [];
+            let allFirst24hGain = [];
 
             appData.litters.forEach(l => {
                 if (!l.weights || l.weights.length === 0 || !l.birthDate) return;
                 let firstRow = l.weights[0];
                 let secondRow = l.weights.length > 1 ? l.weights[1] : null;
+
+                let is24hStep = false;
+                if (secondRow && firstRow.date && secondRow.date) {
+                    let d0 = new Date(firstRow.date);
+                    let d1 = new Date(secondRow.date);
+                    let diffDays01 = Math.round((d1 - d0) / (1000 * 60 * 60 * 24));
+                    if (diffDays01 === 1) {
+                        is24hStep = true;
+                    }
+                }
 
                 l.puppies.forEach((p, pIdx) => {
                     let birthW = firstRow.values[pIdx] || 0;
@@ -613,11 +618,23 @@
                                     sex: p.sex,
                                     pct: parseFloat(pctFirstDay.toFixed(1))
                                 });
+
+                                if (is24hStep) {
+                                    let gain24h = nextW - birthW;
+                                    if (gain24h > 0) {
+                                        allFirst24hGain.push({
+                                            litterId: l.id,
+                                            pIdx: pIdx,
+                                            name: p.name,
+                                            sex: p.sex,
+                                            gain: gain24h
+                                        });
+                                    }
+                                }
                             }
                         }
                     }
 
-                    // Calcul gain max 24h
                     let maxG = 0;
                     for (let i = 1; i < l.weights.length; i++) {
                         let prev = l.weights[i-1].values[pIdx] || 0;
@@ -634,7 +651,6 @@
                         allGains.push({ litterId: l.id, pIdx: pIdx, name: p.name, sex: p.sex, val: maxG });
                     }
 
-                    // Calcul x2 (doubler son poids de naissance)
                     let doubleTarget = birthW * 2;
                     let birthTime = new Date(l.birthDate).getTime();
                     let doubleDays = Infinity;
@@ -650,7 +666,6 @@
                         allDoubles.push({ litterId: l.id, pIdx: pIdx, name: p.name, sex: p.sex, days: doubleDays });
                     }
 
-                    // Calcul x3 (tripler son poids de naissance)
                     let tripleTarget = birthW * 3;
                     let tripleDays = Infinity;
                     for (let w of l.weights) {
@@ -667,23 +682,15 @@
                 });
             });
 
-            // Min/Max Naissance Global
             let minBirth = allBirths.length > 0 ? allBirths.reduce((min, b) => b.val < min.val ? b : min, allBirths[0]) : null;
             let maxBirth = allBirths.length > 0 ? allBirths.reduce((max, b) => b.val > max.val ? b : max, allBirths[0]) : null;
-
-            // Plus gros gain 24h Global
             let maxGain = allGains.length > 0 ? allGains.reduce((max, g) => g.val > max.val ? g : max, allGains[0]) : null;
-
-            // 1er à doubler son poids de naissance Global
             let firstDouble = allDoubles.length > 0 ? allDoubles.reduce((min, d) => d.days < min.days ? d : min, allDoubles[0]) : null;
-
-            // 1er à tripler son poids de naissance Global
             let firstTriple = allTriples.length > 0 ? allTriples.reduce((min, t) => t.days < min.days ? t : min, allTriples[0]) : null;
-
-            // Plus gros % pris au 1er jour de vie Global
             let maxFirstDayPct = allFirstDayPct.length > 0 ? allFirstDayPct.reduce((max, item) => item.pct > max.pct ? item : max, allFirstDayPct[0]) : null;
+            let maxFirst24hGain = allFirst24hGain.length > 0 ? allFirst24hGain.reduce((max, item) => item.gain > max.gain ? item : max, allFirst24hGain[0]) : null;
 
-            return { minBirth, maxBirth, maxGain, firstDouble, firstTriple, maxFirstDayPct };
+            return { minBirth, maxBirth, maxGain, firstDouble, firstTriple, maxFirstDayPct, maxFirst24hGain };
         }
 
         function calculateDoubleWeight(litter, pIdx) {
@@ -744,8 +751,7 @@
                         let ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
 
-                        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                        resolve(compressedDataUrl);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
                     };
                     img.src = e.target.result;
                 };
@@ -760,7 +766,7 @@
                     .select('*')
                     .eq('id', 'main_data')
                     .single();
-                
+
                 if (data && data.content) {
                     if (Array.isArray(data.content)) {
                         appData.litters = data.content;
@@ -817,7 +823,7 @@
                     .eq('id', 'main_data');
 
                 if (error) throw error;
-                
+
                 btn.innerHTML = `<i class="fa-solid fa-check"></i> Sauvegardé !`;
                 btn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
                 btn.classList.add('bg-emerald-600');
@@ -895,7 +901,7 @@
             document.getElementById('litter-main-title').innerHTML = `<i class="fa-solid fa-calendar-plus text-rose-500"></i> ${litter.name} - Pesées journalières & Notes par chiot`;
             let formattedDate = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
             document.getElementById('litter-info-details').innerText = `Date de naissance : ${formattedDate} | Chiots : ${litter.puppies.length}`;
-            
+
             renderHeaderLogo();
             updateAdminLitterSelect();
             renderWeightsTable();
@@ -919,7 +925,6 @@
             let lastIdx = litter.weights.length - 1;
             let currRow = litter.weights[lastIdx];
             let prevRow = litter.weights[litter.weights.length - 2];
-
             let alerts = [];
 
             litter.puppies.forEach((p, pIdx) => {
@@ -942,7 +947,6 @@
 
             if (alerts.length > 0) {
                 let listHtml = alerts.map(a => `<span class="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-red-200 font-bold" style="color: ${a.color};">${a.name} (${a.diff > 0 ? '+' : ''}${a.diff}g / ${a.pct}%)</span>`).join(' ');
-                
                 banner.className = "rounded-2xl p-4 border shadow-sm bg-red-50 border-red-200 text-red-950 flex items-start gap-3";
                 banner.innerHTML = `
                     <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl mt-0.5"></i>
@@ -1019,7 +1023,6 @@
             let litter = getCurrentLitter();
             const select = document.getElementById('family-puppy-select');
             select.innerHTML = '';
-            
             select.innerHTML += `<option value="all">🐾 Vue globale de toute la portée</option>`;
 
             let globalExtremes = getGlobalElevageExtremes();
@@ -1027,7 +1030,7 @@
             litter.puppies.forEach((p, idx) => {
                 let icon = p.sex === 'Mâle' ? '♂' : '♀';
                 let iconsTag = "";
-                
+
                 if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === idx) {
                     iconsTag += ' 🪶';
                 }
@@ -1045,6 +1048,9 @@
                 }
                 if (globalExtremes.maxFirstDayPct && globalExtremes.maxFirstDayPct.litterId === litter.id && globalExtremes.maxFirstDayPct.pIdx === idx) {
                     iconsTag += ' 🚀';
+                }
+                if (globalExtremes.maxFirst24hGain && globalExtremes.maxFirst24hGain.litterId === litter.id && globalExtremes.maxFirst24hGain.pIdx === idx) {
+                    iconsTag += ' 🔥';
                 }
 
                 select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})${iconsTag}</option>`;
@@ -1074,7 +1080,7 @@
                 let resTriple = calculateTripleWeight(litter, pIdx);
                 container.innerHTML += `
                     <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
-                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : x2: <span class="text-rose-950 font-semibold">${resDouble}</span> | x3: <span class="text-rose-950 font-semibold">${resTriple}</span>
+                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : doubler naissance (x2) : <span class="text-rose-950 font-semibold">${resDouble}</span> | tripler naissance (x3) : <span class="text-rose-950 font-semibold">${resTriple}</span>
                     </div>
                 `;
             });
@@ -1091,7 +1097,7 @@
                 let resTriple = calculateTripleWeight(litter, pIdx);
                 container.innerHTML += `
                     <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block">
-                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : x2: <span class="text-rose-950 font-semibold">${resDouble}</span> | x3: <span class="text-rose-950 font-semibold">${resTriple}</span>
+                        <span class="font-bold" style="color:${p.color};">${p.name}</span> : doubler naissance (x2) : <span class="text-rose-950 font-semibold">${resDouble}</span> | tripler naissance (x3) : <span class="text-rose-950 font-semibold">${resTriple}</span>
                     </div>
                 `;
             });
@@ -1143,7 +1149,7 @@
                 let pIdx = parseInt(selectedVal);
                 let puppy = litter.puppies[pIdx];
                 let puppyColor = puppy.color || '#e11d48';
-                
+
                 chartHeading.innerHTML = `<i class="fa-solid fa-chart-line text-rose-500"></i> Courbe de croissance exclusive de ${puppy.name}`;
                 chartSubheading.innerText = `Affichage de la courbe individuelle de ${puppy.name}.`;
                 percentHeading.innerHTML = `<i class="fa-solid fa-percent text-rose-500"></i> Pourcentage d'Évolution Journalier (%) - ${puppy.name}`;
@@ -1155,9 +1161,11 @@
                 let rosetteText = "";
 
                 if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
-                    rosetteText = "";
+                    rosetteText = "Poids le plus léger à la naissance";
                 } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
-                    rosetteText = "";
+                    rosetteText = "Poids le plus lourd à la naissance";
+                } else if (globalExtremes.maxFirst24hGain && globalExtremes.maxFirst24hGain.litterId === litter.id && globalExtremes.maxFirst24hGain.pIdx === pIdx) {
+                    rosetteText = `Record 24h (+${globalExtremes.maxFirst24hGain.gain}g)`;
                 } else if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === pIdx) {
                     rosetteText = `Record gain 24h (+${globalExtremes.maxGain.val}g)`;
                 } else if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === pIdx) {
@@ -1168,14 +1176,10 @@
                     rosetteText = `Record J1 (+${globalExtremes.maxFirstDayPct.pct}%)`;
                 }
 
-                if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
-                    badgeHtml = `<div class="inline-flex items-center justify-center bg-rose-100 text-rose-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-rose-200" title="Poids le plus léger à la naissance"><i class="fa-solid fa-feather text-sm"></i></div>`;
-                } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
-                    badgeHtml = `<div class="inline-flex items-center justify-center bg-amber-100 text-amber-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-amber-200" title="Poids le plus lourd à la naissance"><i class="fa-solid fa-shield text-sm"></i></div>`;
-                } else if (rosetteText !== "") {
+                if (rosetteText !== "") {
                     let lightClass = isLight ? 'light' : '';
                     badgeHtml = `
-                        <div class="rosette-badge ml-3">
+                        <div class="rosette-badge ml-2" title="${rosetteText}">
                             <div class="rosette-circle ${lightClass}">${rosetteText}</div>
                             <div class="rosette-ribbons"><div class="rosette-ribbon-left"></div><div class="rosette-ribbon-right"></div></div>
                         </div>`;
@@ -1185,12 +1189,11 @@
                 let sexIcon = puppy.sex === 'Mâle' ? '♂ Mâle' : '♀ Femelle';
                 document.getElementById('family-puppy-subtitle').innerText = `Chiot Shetland - ${sexIcon}`;
 
-                // --- GESTION DE LA VUE DE L'ENCADRÉ D'ÂGE ---
                 if (puppy.deceased) {
                     ageBanner.classList.add('hidden');
                 } else {
                     ageBanner.classList.remove('hidden');
-                    let birthDateStr = litter.birthDate; 
+                    let birthDateStr = litter.birthDate;
                     if (birthDateStr) {
                         let birthDateObj = new Date(birthDateStr);
                         let todayObj = new Date();
@@ -1202,7 +1205,6 @@
                         if (diffDays < 0) diffDays = 0;
 
                         let ageText = "";
-
                         if (diffDays >= 60) {
                             let years = todayObj.getFullYear() - birthDateObj.getFullYear();
                             let months = todayObj.getMonth() - birthDateObj.getMonth();
@@ -1222,7 +1224,6 @@
                             if (years > 0) parts.push(`${years} an${years > 1 ? 's' : ''}`);
                             if (months > 0) parts.push(`${months} mois`);
                             if (days > 0 || parts.length === 0) parts.push(`${days} jour${days > 1 ? 's' : ''}`);
-                            
                             ageText = parts.join(', ');
                         } else {
                             let weeks = Math.floor(diffDays / 7);
@@ -1238,14 +1239,12 @@
                         }
 
                         let formattedBirthDate = birthDateStr.split('-').reverse().join('/');
-
                         document.getElementById('puppy-age-days').innerText = `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
                         document.getElementById('puppy-birth-date-text').innerText = `Né(e) le ${formattedBirthDate}`;
                         document.getElementById('puppy-age-weeks').innerText = ageText;
 
                         ageBanner.style.borderColor = puppyColor;
-                        let iconEl = document.getElementById('puppy-ribbon-icon');
-                        iconEl.style.backgroundColor = puppyColor;
+                        document.getElementById('puppy-ribbon-icon').style.backgroundColor = puppyColor;
                     }
                 }
 
@@ -1328,7 +1327,7 @@
             if (isIndividual) {
                 let puppy = litter.puppies[pIdx];
                 let imgTag = puppy.photo ? `<img src="${puppy.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
-                
+
                 pTable.querySelector('thead tr').innerHTML = `<th class="p-3 rounded-l-xl">Date</th><th class="p-3 text-center rounded-r-xl" style="color:${puppy.color};">${imgTag}${puppy.name} (% Évolution)</th>`;
                 gTable.querySelector('thead tr').innerHTML = `<th class="p-3 rounded-l-xl">Date</th><th class="p-3 text-center rounded-r-xl" style="color:${puppy.color};">${imgTag}${puppy.name} (Prise en g)</th>`;
 
@@ -1341,10 +1340,9 @@
                     let dateFormatted = litter.weights[i].date.split('-').reverse().join('/');
                     let prev = litter.weights[i-1].values[pIdx] || 0;
                     let curr = litter.weights[i].values[pIdx] || 0;
-                    
+
                     let pct = (prev > 0 && curr > 0) ? (((curr - prev) / prev) * 100).toFixed(1) : null;
                     let gain = (prev > 0 && curr > 0) ? (curr - prev) : null;
-
                     let colorClass = (pct !== null && pct < 3) ? "text-red-600 font-bold bg-red-50" : "text-rose-950";
 
                     let trP = document.createElement('tr');
@@ -1357,13 +1355,12 @@
                     trG.innerHTML = `<td class="p-3 font-semibold">${dateFormatted}</td><td class="p-3 text-center font-medium">${gain !== null ? '+' + gain + ' g' : '-'}</td>`;
                     gTbody.appendChild(trG);
                 }
-
             } else {
                 pTable.querySelector('thead tr').innerHTML = '<th class="p-3 rounded-l-xl">Date</th>' + litter.puppies.map(p => {
                     let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                     return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
                 }).join('');
-                
+
                 let pTbody = pTable.querySelector('tbody');
                 pTbody.innerHTML = '';
 
@@ -1385,7 +1382,7 @@
                     let imgTag = p.photo ? `<img src="${p.photo}" class="w-6 h-6 rounded-full object-cover inline-block mr-1 border border-white">` : "";
                     return `<th class="p-3 text-center" style="color:${p.color};">${imgTag}${p.name}</th>`;
                 }).join('');
-                
+
                 let gTbody = gTable.querySelector('tbody');
                 gTbody.innerHTML = '';
 
@@ -1431,9 +1428,7 @@
             document.getElementById('print-puppy-name').innerText = puppy.name;
             let birthDateFormatted = litter.birthDate ? litter.birthDate.split('-').reverse().join('/') : '-';
             document.getElementById('print-puppy-details').innerText = `Portée : ${litter.name} • Né(e) le ${birthDateFormatted} • Sexe : ${puppy.sex}`;
-            
-            let todayStr = new Date().toLocaleDateString('fr-FR');
-            document.getElementById('print-date-edition').innerText = `Édité le ${todayStr}`;
+            document.getElementById('print-date-edition').innerText = `Édité le ${new Date().toLocaleDateString('fr-FR')}`;
 
             let birthW = litter.weights.length > 0 ? (litter.weights[0].values[pIdx] || 0) : 0;
             let latestW = litter.weights.length > 0 ? (litter.weights[litter.weights.length - 1].values[pIdx] || 0) : 0;
@@ -1451,7 +1446,7 @@
                 let wVal = wRow.values[pIdx] || '-';
                 let dateFormatted = wRow.date.split('-').reverse().join('/');
                 let noteText = wRow.notes && wRow.notes[pIdx] ? wRow.notes[pIdx] : '';
-                
+
                 let pctStr = '-';
                 let gainStr = '-';
 
@@ -1538,8 +1533,7 @@
             let theadTr = document.querySelector('#weights-table thead tr');
             theadTr.innerHTML = '<th class="p-3 rounded-l-xl">Date</th>';
             litter.puppies.forEach((p, pIdx) => {
-                let imgTag = p.photo ? `<img src="${p.photo}" class="w-8 h-8 rounded-full object-cover inline-block mr-1.5 border-2 border-white shadow-sm">` : `<i class="fa-solid fa-dog mr-1">`;
-                
+                let imgTag = p.photo ? `<img src="${p.photo}" class="w-8 h-8 rounded-full object-cover inline-block mr-1.5 border-2 border-white shadow-sm">` : `<i class="fa-solid fa-dog mr-1"></i>`;
                 theadTr.innerHTML += `
                     <th class="p-3 text-center" style="color:${p.color};">
                         <div class="inline-flex items-center justify-center gap-1.5 cursor-pointer group" onclick="triggerQuickPhotoChange(${pIdx})" title="Cliquer pour modifier la photo">
@@ -1578,7 +1572,7 @@
             updateWeightAlertBanner();
             renderPercentTable();
             renderGainTable();
-            if(wIdx === 0) {
+            if (wIdx === 0) {
                 renderWeightsTable();
             }
         }
@@ -1763,7 +1757,7 @@
             let container = document.getElementById('all-litters-list');
             container.innerHTML = '';
             let list = getLitters();
-            
+
             list.forEach((l, index) => {
                 let upDisabled = index === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
                 let downDisabled = index === list.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-rose-100 cursor-pointer';
@@ -1928,10 +1922,10 @@
                     for (let r = 1; r < jsonRows.length; r++) {
                         let row = jsonRows[r];
                         if (!row || row.length === 0) continue;
-                        
+
                         let rawDate = row[0];
                         let dateStr = "";
-                        
+
                         if (typeof rawDate === 'number') {
                             let dateObj = XLSX.SSF.parse_date_code(rawDate);
                             if (dateObj) {
@@ -1968,7 +1962,6 @@
                     }
 
                     let litterName = file.name.replace(/\.[^/.]+$/, "").replace(/[_]/g, " ");
-
                     let importedLitter = {
                         id: "litter-" + Date.now() + "-" + Math.floor(Math.random()*1000),
                         name: litterName,
@@ -2029,7 +2022,6 @@
             let count = parseInt(document.getElementById('modal-puppy-count').value) || 4;
 
             let puppies = [];
-
             for (let i = 1; i <= count; i++) {
                 let pName = document.getElementById(`puppy-name-${i}`).value || `Chiot ${i}`;
                 let pSex = document.getElementById(`puppy-sex-${i}`).value;
@@ -2096,7 +2088,7 @@
             litter.weights.forEach(w => {
                 let row = [w.date];
                 litter.puppies.forEach((_, pIdx) => {
-                    row.push(w.weights && w.weights[pIdx] ? w.weights[pIdx] : (w.values ? w.values[pIdx] || "" : ""));
+                    row.push(w.values && w.values[pIdx] !== undefined ? w.values[pIdx] : "");
                     row.push(w.notes && w.notes[pIdx] ? w.notes[pIdx] : "");
                 });
                 data.push(row);
