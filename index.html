@@ -1007,21 +1007,25 @@
 
             litter.puppies.forEach((p, idx) => {
                 let icon = p.sex === 'Mâle' ? '♂' : '♀';
-                let tag = "";
+                let iconsTag = "";
                 
                 if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === idx) {
-                    tag = p.sex === 'Mâle' ? ' [Le + léger de l\'élevage]' : ' [La + légère de l\'élevage]';
-                } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === idx) {
-                    tag = p.sex === 'Mâle' ? ' [Le + lourd de l\'élevage]' : ' [La + lourde de l\'élevage]';
-                } else if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === idx) {
-                    tag = ' [Record gain 24h de l\'élevage]';
-                } else if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === idx) {
-                    tag = p.sex === 'Mâle' ? ' [1er à doubler de l\'élevage]' : ' [1ère à doubler de l\'élevage]';
-                } else if (globalExtremes.firstTriple && globalExtremes.firstTriple.litterId === litter.id && globalExtremes.firstTriple.pIdx === idx) {
-                    tag = p.sex === 'Mâle' ? ' [1er à tripler de l\'élevage]' : ' [1ère à tripler de l\'élevage]';
+                    iconsTag += ' 🪶';
+                }
+                if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === idx) {
+                    iconsTag += ' 🛡️';
+                }
+                if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === idx) {
+                    iconsTag += ' ⚡';
+                }
+                if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === idx) {
+                    iconsTag += ' 🏅';
+                }
+                if (globalExtremes.firstTriple && globalExtremes.firstTriple.litterId === litter.id && globalExtremes.firstTriple.pIdx === idx) {
+                    iconsTag += ' 🏆';
                 }
 
-                select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})${tag}</option>`;
+                select.innerHTML += `<option value="${idx}">${p.name} (${icon} ${p.sex})${iconsTag}</option>`;
             });
             renderFamilyView();
         }
@@ -1129,9 +1133,9 @@
                 let rosetteText = "";
 
                 if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
-                    rosetteText = puppy.sex === 'Mâle' ? "Le + léger de l'élevage" : "La + légère de l'élevage";
+                    rosetteText = ""; // Sans texte explicit, juste la cocarde rosace
                 } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
-                    rosetteText = puppy.sex === 'Mâle' ? "Le + lourd de l'élevage" : "La + lourde de l'élevage";
+                    rosetteText = ""; // Sans texte explicit, juste la cocarde rosace
                 } else if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === pIdx) {
                     rosetteText = `Record gain 24h (+${globalExtremes.maxGain.val}g)`;
                 } else if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === pIdx) {
@@ -1140,7 +1144,11 @@
                     rosetteText = puppy.sex === 'Mâle' ? "1er à tripler x3" : "1ère à tripler x3";
                 }
 
-                if (rosetteText !== "") {
+                if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
+                    badgeHtml = `<div class="inline-flex items-center justify-center bg-rose-100 text-rose-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-rose-200" title="Le/La plus léger(e) de l'élevage"><i class="fa-solid fa-feather text-sm"></i></div>`;
+                } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
+                    badgeHtml = `<div class="inline-flex items-center justify-center bg-amber-100 text-amber-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-amber-200" title="Le/La plus lourd(e) de l'élevage"><i class="fa-solid fa-shield text-sm"></i></div>`;
+                } else if (rosetteText !== "") {
                     let lightClass = isLight ? 'light' : '';
                     badgeHtml = `
                         <div class="rosette-badge ml-3">
@@ -2064,7 +2072,7 @@
             litter.weights.forEach(w => {
                 let row = [w.date];
                 litter.puppies.forEach((_, pIdx) => {
-                    row.push(w.values[pIdx] || "");
+                    row.push(w.weights && w.weights[pIdx] ? w.weights[pIdx] : (w.values ? w.values[pIdx] || "" : ""));
                     row.push(w.notes && w.notes[pIdx] ? w.notes[pIdx] : "");
                 });
                 data.push(row);
