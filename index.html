@@ -634,7 +634,7 @@
                         allGains.push({ litterId: l.id, pIdx: pIdx, name: p.name, sex: p.sex, val: maxG });
                     }
 
-                    // Calcul x2
+                    // Calcul x2 (doubler son poids de naissance)
                     let doubleTarget = birthW * 2;
                     let birthTime = new Date(l.birthDate).getTime();
                     let doubleDays = Infinity;
@@ -650,7 +650,7 @@
                         allDoubles.push({ litterId: l.id, pIdx: pIdx, name: p.name, sex: p.sex, days: doubleDays });
                     }
 
-                    // Calcul x3
+                    // Calcul x3 (tripler son poids de naissance)
                     let tripleTarget = birthW * 3;
                     let tripleDays = Infinity;
                     for (let w of l.weights) {
@@ -674,10 +674,10 @@
             // Plus gros gain 24h Global
             let maxGain = allGains.length > 0 ? allGains.reduce((max, g) => g.val > max.val ? g : max, allGains[0]) : null;
 
-            // 1er à doubler Global
+            // 1er à doubler son poids de naissance Global
             let firstDouble = allDoubles.length > 0 ? allDoubles.reduce((min, d) => d.days < min.days ? d : min, allDoubles[0]) : null;
 
-            // 1er à tripler Global
+            // 1er à tripler son poids de naissance Global
             let firstTriple = allTriples.length > 0 ? allTriples.reduce((min, t) => t.days < min.days ? t : min, allTriples[0]) : null;
 
             // Plus gros % pris au 1er jour de vie Global
@@ -1161,17 +1161,17 @@
                 } else if (globalExtremes.maxGain && globalExtremes.maxGain.litterId === litter.id && globalExtremes.maxGain.pIdx === pIdx) {
                     rosetteText = `Record gain 24h (+${globalExtremes.maxGain.val}g)`;
                 } else if (globalExtremes.firstDouble && globalExtremes.firstDouble.litterId === litter.id && globalExtremes.firstDouble.pIdx === pIdx) {
-                    rosetteText = puppy.sex === 'Mâle' ? "1er à doubler x2" : "1ère à doubler x2";
+                    rosetteText = puppy.sex === 'Mâle' ? "1er à doubler son poids de naissance (x2)" : "1ère à doubler son poids de naissance (x2)";
                 } else if (globalExtremes.firstTriple && globalExtremes.firstTriple.litterId === litter.id && globalExtremes.firstTriple.pIdx === pIdx) {
-                    rosetteText = puppy.sex === 'Mâle' ? "1er à tripler x3" : "1ère à tripler x3";
+                    rosetteText = puppy.sex === 'Mâle' ? "1er à tripler son poids de naissance (x3)" : "1ère à tripler son poids de naissance (x3)";
                 } else if (globalExtremes.maxFirstDayPct && globalExtremes.maxFirstDayPct.litterId === litter.id && globalExtremes.maxFirstDayPct.pIdx === pIdx) {
                     rosetteText = `Record J1 (+${globalExtremes.maxFirstDayPct.pct}%)`;
                 }
 
                 if (globalExtremes.minBirth && globalExtremes.minBirth.litterId === litter.id && globalExtremes.minBirth.pIdx === pIdx) {
-                    badgeHtml = `<div class="inline-flex items-center justify-center bg-rose-100 text-rose-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-rose-200" title="Le/La plus léger(e) de l'élevage"><i class="fa-solid fa-feather text-sm"></i></div>`;
+                    badgeHtml = `<div class="inline-flex items-center justify-center bg-rose-100 text-rose-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-rose-200" title="Poids le plus léger à la naissance"><i class="fa-solid fa-feather text-sm"></i></div>`;
                 } else if (globalExtremes.maxBirth && globalExtremes.maxBirth.litterId === litter.id && globalExtremes.maxBirth.pIdx === pIdx) {
-                    badgeHtml = `<div class="inline-flex items-center justify-center bg-amber-100 text-amber-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-amber-200" title="Le/La plus lourd(e) de l'élevage"><i class="fa-solid fa-shield text-sm"></i></div>`;
+                    badgeHtml = `<div class="inline-flex items-center justify-center bg-amber-100 text-amber-700 w-9 h-9 rounded-full ml-3 shadow-sm border border-amber-200" title="Poids le plus lourd à la naissance"><i class="fa-solid fa-shield text-sm"></i></div>`;
                 } else if (rosetteText !== "") {
                     let lightClass = isLight ? 'light' : '';
                     badgeHtml = `
@@ -1267,8 +1267,8 @@
                 let doubleDateStr = calculateDoubleWeight(litter, pIdx);
                 let tripleDateStr = calculateTripleWeight(litter, pIdx);
                 document.getElementById('fam-double-weight').innerHTML = `
-                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppyColor};">Poids doublé (x2)</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>
-                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppyColor};">Poids triplé (x3)</span> : <span class="text-rose-950 font-semibold">${tripleDateStr}</span></div>
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppyColor};">Doubler son poids de naissance (x2)</span> : <span class="text-rose-950 font-semibold">${doubleDateStr}</span></div>
+                    <div class="bg-white px-2.5 py-1 rounded-lg border border-amber-200 shadow-sm inline-block"><span class="font-bold" style="color:${puppyColor};">Tripler son poids de naissance (x3)</span> : <span class="text-rose-950 font-semibold">${tripleDateStr}</span></div>
                 `;
 
                 let notesContainer = document.getElementById('family-notes-list');
